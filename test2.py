@@ -14,9 +14,11 @@ from OpenGL.GLU import *
 import sys
 import cube as c
 
-cubes = [c.Cube()]
-cubes[0].setPosition((0,0,0))
+cubes = [c.Cube() for i in range(2)]
+cubes[0].setPosition((0, 0, 0))
 cubes[0].setColor('b')
+cubes[1].setPosition((4, 0, 0))
+cubes[1].setColor('g')
 
 window = 0
 width, height = 800, 600
@@ -25,7 +27,7 @@ aspect_ratio = width/height
 x_camera_pos = 0.0
 y_camera_pos = 0.0
 z_camera_pos = 20.0
-CAMERA_SPEED = 1.0
+CAMERA_SPEED = 2.0
 
 
 def view():
