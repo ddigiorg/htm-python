@@ -24,69 +24,98 @@ window = 0
 width, height = 800, 600
 aspect_ratio = width/height
 
-x_camera_pos = 0.0
-y_camera_pos = 0.0
-z_camera_pos = 5.0
+x_camera_pos       = 0.0
+y_camera_pos       = 0.0
+z_camera_pos       = 1.0
+yaw_camera_angle   = 0.0
+pitch_camera_angle = 0.0
 CAMERA_SPEED = 1.0
+CAMERA_ANGLE = 10.0
 
-vbo_buffer = None
+vertex_buffer = None
+color_buffer = None
 vertex_count = None
+
 
 def init():
 	buildVBOs()
 
 	glClearColor(0.0, 0.0, 0.0, 0.5)					# Black background
 	glClearDepth(1.0)									# Depth Buffer setup
-	glDepthFunc(GL_LEQUAL)								# The type of Depth Testing
+	glDepthFunc(GL_LESS)								# The type of Depth Testing
 	glEnable (GL_DEPTH_TEST)							# Enable Depth Testing
 	glShadeModel(GL_SMOOTH)								# Select Smooth Shading
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)	# Set Perspective Calculations to most accurate
 #	glEnable(GL_TEXTURE_2D)								# Enable Texture Mapping
 	glColor4f(1.0, 6.0, 6.0, 1.0)
 
+
 def view():
 	global x_camera_pos, y_camera_pos
 	glTranslate(-x_camera_pos, -y_camera_pos, -z_camera_pos)
-
-
-def drawCubes():
-	global cubes
-	glBegin(GL_QUADS)
-	for cube in cubes:
-		glColor3fv(cube.getColor())
-		for surface in cube.getSurfaces():
-			for vertex in surface:
-				glVertex3fv(cube.getVertices()[vertex])
-	glEnd()
+	glRotate(yaw_camera_angle, 0, 1, 0)
+	glRotate(pitch_camera_angle, 1, 0, 0)
 
 def buildVBOs():
-	global vbo_buffer, vertex_count
-	vertices = np.array([0.0, 1.0, 0.0,
-						 1.0, 1.0, 0.0,
-						 1.0, 0.0, 0.0,
-						 0.0, 0.0, 0.0], dtype='f')
-	vertex_count = 4 
+	global vertex_buffer, color_buffer,  vertex_count
+	vertex_count = 3*12
+	vertices = np.array([ -1.0, -1.0, -1.0, -1.0, -1.0,  1.0, -1.0,  1.0,  1.0,
+    					   1.0,  1.0, -1.0, -1.0, -1.0, -1.0, -1.0,  1.0, -1.0,
+    					   1.0, -1.0,  1.0, -1.0, -1.0, -1.0,  1.0, -1.0, -1.0,
+						   1.0,  1.0, -1.0,  1.0, -1.0, -1.0, -1.0, -1.0, -1.0,
+					      -1.0, -1.0, -1.0, -1.0,  1.0,  1.0, -1.0,  1.0, -1.0,
+						   1.0, -1.0,  1.0, -1.0, -1.0,  1.0, -1.0, -1.0, -1.0,
+					 	  -1.0,  1.0,  1.0, -1.0, -1.0,  1.0,  1.0, -1.0,  1.0,
+					       1.0,  1.0,  1.0,  1.0, -1.0, -1.0,  1.0,  1.0, -1.0,
+						   1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0, -1.0,  1.0,
+						   1.0,  1.0,  1.0,  1.0,  1.0, -1.0, -1.0,  1.0, -1.0,
+						   1.0,  1.0,  1.0, -1.0,  1.0, -1.0, -1.0,  1.0,  1.0,
+						   1.0,  1.0,  1.0, -1.0,  1.0,  1.0,  1.0, -1.0,  1.0], dtype='f')
 
-	vbo_buffer = glGenBuffers(1)
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_buffer)
+	colors   = np.array([  0.0,  0.0,  1.0,  0.0,  0.0,  1.0,  0.0,  0.0,  1.0,
+						   0.0,  0.0,  1.0,  0.0,  0.0,  1.0,  0.0,  0.0,  1.0,
+						   0.0,  0.0,  0.9,  0.0,  0.0,  0.9,  0.0,  0.0,  0.9,
+						   0.0,  0.0,  0.9,  0.0,  0.0,  0.9,  0.0,  0.0,  0.9,
+						   0.0,  0.0,  0.8,  0.0,  0.0,  0.8,  0.0,  0.0,  0.8,
+						   0.0,  0.0,  0.8,  0.0,  0.0,  0.8,  0.0,  0.0,  0.8,
+						   0.0,  0.0,  0.7,  0.0,  0.0,  0.7,  0.0,  0.0,  0.7,
+						   0.0,  0.0,  0.7,  0.0,  0.0,  0.7,  0.0,  0.0,  0.7,
+						   0.0,  0.0,  0.6,  0.0,  0.0,  0.6,  0.0,  0.0,  0.6,
+						   0.0,  0.0,  0.6,  0.0,  0.0,  0.6,  0.0,  0.0,  0.6,
+						   0.0,  0.0,  0.5,  0.0,  0.0,  0.5,  0.0,  0.0,  0.5,
+						   0.0,  0.0,  0.5,  0.0,  0.0,  0.5,  0.0,  0.0,  0.5], dtype='f')
+
+	# opengl vertex buffer created, bound, filled, and configured
+	vertex_buffer = glGenBuffers(1)
+	glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer)
 	glBufferData(GL_ARRAY_BUFFER, vertices, GL_STATIC_DRAW)
+
+	# opengl color buffer created, bound, filled, and configured
+	color_buffer = glGenBuffers(1)
+	glBindBuffer(GL_ARRAY_BUFFER, color_buffer)
+	glBufferData(GL_ARRAY_BUFFER, colors, GL_STATIC_DRAW)
 
 
 def drawVBOs():
-	global vbo_buffer, vertex_count
+	global vertex_buffer, color_buffer, vertex_count
 	
-	# Enable Vertex Arrays
+	# Enable Vertex Arrays and Color Arrays
 	glEnableClientState(GL_VERTEX_ARRAY)
+	glEnableClientState(GL_COLOR_ARRAY)
 	
 	# Set pointers to the data
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_buffer)
-	glVertexPointer(4, GL_FLOAT, 0, None)
+	glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer)
+	glVertexPointer(3, GL_FLOAT, 0, None)
+
+	glBindBuffer(GL_ARRAY_BUFFER, color_buffer)
+	glColorPointer(3, GL_FLOAT, 0, None)	
 	
 	# Render
-	glDrawArrays(GL_LINE_LOOP, 0, vertex_count)
+	glDrawArrays(GL_TRIANGLES, 0, vertex_count)
 
-	# Disable Vertex Arrays
+	# Disable Vertex Arrays and Color Arrays
 	glDisableClientState(GL_VERTEX_ARRAY)
+	glDisableClientState(GL_COLOR_ARRAY)
 
 
 def drawScene():
@@ -100,7 +129,6 @@ def drawScene():
 	glLoadIdentity()	
 
 	view()
-#	drawCubes()
 	drawVBOs()
 
 	# Flush the opengl rendering pipeline	
@@ -108,7 +136,7 @@ def drawScene():
 
 
 def keyPressed(key, x, y):
-	global x_camera_pos, y_camera_pos, z_camera_pos
+	global x_camera_pos, y_camera_pos, z_camera_pos, yaw_camera_angle, pitch_camera_angle
 	if key == ESCAPE.encode():
 		glutDestroyWindow(window)
 		exit(0)
@@ -124,7 +152,16 @@ def keyPressed(key, x, y):
 		z_camera_pos += CAMERA_SPEED
 	if key == 'w'.encode():
 		z_camera_pos -= CAMERA_SPEED
+	if key == GLUT_KEY_LEFT:
+		yaw_camera_angle += CAMERA_ANGLE
+	if key == GLUT_KEY_RIGHT:
+		yaw_camera_angle -= CAMERA_ANGLE
+	if key == GLUT_KEY_UP:
+		pitch_camera_angle += CAMERA_ANGLE
+	if key == GLUT_KEY_DOWN:
+		pitch_camera_angle -= CAMERA_ANGLE
 	glutPostRedisplay()
+
 
 def main():
 	global window
@@ -160,5 +197,6 @@ def main():
 
 	# Start event processing engine
 	glutMainLoop()
+
 
 main()
