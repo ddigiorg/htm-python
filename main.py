@@ -2,135 +2,165 @@
 #python 3.5.1
 #pyopengl 3.1
 
-# http://nehe.gamedev.net/tutorial/vertex_buffer_objects/22002/
-# http://antongerdelan.net/opengl/vertexbuffers.html
-# http://www.opengl-tutorial.org/beginners-tutorials/tutorial-4-a-colored-cube/
-# https://www.opengl.org/wiki/Vertex_Specification_Best_Practices
+# *NOTE: CHECK IF APPLICABLE
+# http://www.opengl-tutorial.org/intermediate-tutorials/billboards-particles/particles-instancing/
+# https://github.com/opengl-tutorials/ogl/blob/master/tutorial18_billboards_and_particles/tutorial18_particles.cpp
 
 from OpenGL.GL import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
 import numpy as np
-import cube as c
+import cube as cube
+import shader as shader
 
-ESCAPE = '\x1b'
-
-n_cubes_x = 20 # Typically 40 in HTM region
-n_cubes_y = 10 # Typically 10 in HTM region
-n_cubes_z = 20 # Typically 40 in HTM region
-n_cubes   = n_cubes_x * n_cubes_y * n_cubes_z 
-cubes = [[[None]*n_cubes_z]*n_cubes_y]*n_cubes_x
-CUBE_SPACING = 4
-CUBE_DATA_SIZE = 108*4
-
+# Main global variables
 window = 0
 width, height = 800, 600
 aspect_ratio = width/height
 
+# Cube global variables
+n_cubes_x    = None
+n_cubes_y    = None
+n_cubes_z    = None
+n_cubes      = None
+cubes_region = None
+
+# Camera global variables
+CAMERA_SPEED       = 5.0
+CAMERA_ANGLE       = 10.0
 x_camera_pos       = 0.0
 y_camera_pos       = 0.0
 z_camera_pos       = 10.0
 yaw_camera_angle   = 0.0
 pitch_camera_angle = 0.0
-CAMERA_SPEED = 5.0
-CAMERA_ANGLE = 10.0
 
-vertex_position_buffer = None
-vertex_position_data   = None
-vertex_color_buffer    = None
-vertex_color_data      = None
-vertex_count           = None
+# Shader global variables
+shaders_program        = None
 
+# VBO global variables
+vertex_template_buffer = None
+cubes_position_buffer  = None
+cubes_color_buffer     = None
+cubes_template_data    = None
+cubes_position_data    = None
+cubes_color_data       = None
+
+# Keyboard global variables
+ESCAPE = '\x1b'
 color_flag = 0
 
-update_colors = ((0, 0, 0, 'b'),
-				 (0, 1, 0, 'b'),
-				 (0, 2, 0, 'b'),
-				 (0, 3, 0, 'b'),
-				 (0, 4, 0, 'b'))
-
-def init():
-	initCubes()
-	buildVBOs()
-
-	glClearColor(0.0, 0.0, 0.0, 0.5)					# Black background
-	glClearDepth(1.0)									# Depth Buffer setup
-	glDepthFunc(GL_LESS)								# The type of Depth Testing
-	glEnable (GL_DEPTH_TEST)							# Enable Depth Testing
-	glShadeModel(GL_SMOOTH)								# Select Smooth Shading
-	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)	# Set Perspective Calculations to most accurate
-#	glEnable(GL_TEXTURE_2D)								# Enable Texture Mapping
-	glColor4f(1.0, 6.0, 6.0, 1.0)
-
+def initShaders():
+        global shaders_program
+        vertex_shader   = shader.compile_shader("vertex")
+        fragment_shader = shader.compile_shader("fragment")
+        shaders_program = shader.link_shader_program(vertex_shader, fragment_shader)     
 
 def initCubes():
-	global cubes, n_cubes_x, n_cubes_y, n_cubes_z, n_cubes, vertex_position_data, vertex_color_data, vertex_count
+        global n_cubes_x, n_cubes_y, n_cubes_z, n_cubes, cubes_region, vertex_template_data, cubes_position_data, cubes_color_data
 
-	# Initialize cube positions, opengl position data, and opengl color data
-	position_list = []
-	color_list    = []	
-	for x in range(n_cubes_x):
-		for y in range(n_cubes_y):
-			for z in range(n_cubes_z):
-				cubes[x][y][z] = c.Cube()
-				cubes[x][y][z].setPosition(0 + x * -CUBE_SPACING, 
-										   0 + y * -CUBE_SPACING,
-										   0 + z * -CUBE_SPACING)
-				position_list = position_list + cubes[x][y][z].getVertexPositions()
-				color_list    = color_list    + cubes[x][y][z].getVertexColors()
-	vertex_position_data = np.array(position_list, dtype='f')
-	vertex_color_data    = np.array(color_list   , dtype='f')
+        CUBE_POSITION_DATA_SIZE = 3
+        CUBE_COLOR_DATA_SIZE = 4
+        CUBE_SPACING = 4
+        n_cubes_x = 20 # Typically 40 in HTM region
+        n_cubes_y = 10 # Typically 10 in HTM region
+        n_cubes_z = 20 # Typically 40 in HTM region
+        n_cubes   = n_cubes_x * n_cubes_y * n_cubes_z
+        cubes_region = [[[None]*n_cubes_z]*n_cubes_y]*n_cubes_x
 
-	#vertex_count is n_cubes times  n_triangles_per_cube times n_vertices_per_triangle
-	vertex_count = n_cubes*12*3
+        position_list = [0] * n_cubes * CUBE_POSITION_DATA_SIZE
+        color_list = [0] * n_cubes * CUBE_COLOR_DATA_SIZE
 
-def buildVBOs():
-	global vertex_position_buffer, vertex_position_data, vertex_color_buffer, vertex_color_data
+        for x, y, z in np.nindex(n_cubes_x, n_cubes_y, n_cubes_z):
+                i = ((x * n_cubes_y * n_cubes_z) + (y * n_cubes_z) + z)
+                cubes[x][y][z] = cube.Cube()
+		cubes[x][y][z].setPosition(0 + x * -CUBE_SPACING,
+                                           0 + y * -CUBE_SPACING,
+                                           0 + z * -CUBE_SPACING)
 
-	# Opengl vertex position buffer created, bound, filled with data, and set pointers to data
-	vertex_position_buffer = glGenBuffers(1)
-	glBindBuffer(GL_ARRAY_BUFFER, vertex_position_buffer)
-	glBufferData(GL_ARRAY_BUFFER, vertex_position_data, GL_STATIC_DRAW)
-	glVertexPointer(3, GL_FLOAT, 0, None)
+                position_list[i  ] = cubes[x][y][z].getPosition()[0] # x position
+                position_list[i+1] = cubes[x][y][z].getPosition()[1] # y position
+                position_list[i+2] = cubes[x][y][z].getPosition()[2] # z position
+                color_list[i  ] = cubes[x][y][z].getColor()[0] # r color
+                color_list[i+1] = cubes[x][y][z].getColor()[1] # g color
+                color_list[i+2] = cubes[x][y][z].getColor()[2] # b color
+                color_list[i+3] = cubes[x][y][z].getColor()[3] # a color
 
-	# Opengl vertex color buffer created, bound, filled with data, and set pointers to data
-	vertex_color_buffer = glGenBuffers(1)
-	glBindBuffer(GL_ARRAY_BUFFER, vertex_color_buffer)
-	glBufferData(GL_ARRAY_BUFFER, vertex_color_data, GL_DYNAMIC_DRAW)
-	glColorPointer(3, GL_FLOAT, 0, None)
+        vertex_template_data = np.array(cube.getVertexTemplate(), dtype='f')
+	cubes_position_data = np.array(position_list, dtype='f')
+	cubes_color_data = np.array(position_list, dtype='f')
+
+def initVBOs():
+	global vertex_template_buffer, cubes_position_buffer, cubes_color_buffer, cubes_template_data
+      
+	# Opengl VBO vertex template buffer created, bound, and filled with data
+	vertex_template_buffer = glGenBuffers(1)
+	glBindBuffer(GL_ARRAY_BUFFER, vertex_template_buffer)
+	glBufferData(GL_ARRAY_BUFFER, vertex_template_data, GL_STATIC_DRAW)
+
+	# Opengl VBO cube position buffer created, bound, and left empty
+	cubes_position_buffer = glGenBuffers(1)
+	glBindBuffer(GL_ARRAY_BUFFER, cubes_position_buffer)
+	glBufferData(GL_ARRAY_BUFFER, None, GL_STREAM_DRAW) # cubes_position_data   GL_STATIC_DRAW
+
+	# Opengl VBO cube color buffer created, bound, and left empty
+	cubes_color_buffer = glGenBuffers(1)
+	glBindBuffer(GL_ARRAY_BUFFER, cubes_color_buffer)
+	glBufferData(GL_ARRAY_BUFFER, None, GL_STREAM_DRAW) #cubes_color_data
+
+def updateCubes():
+        global cubes
+        global color_flag
+
+        if color_flag > 0:
+                cubes[0][0][0].setColor(0, 0, 1, 1)
+                
+def updateVBOs():
+	global n_cubes, shaders_program, cubes_position_buffer, cubes_color_buffer, cubes_position_data, cubes_color_data
+
+	# Opengl VBO cube position buffer bound, "orphaned", and filled with data
+	glBindBuffer(GL_ARRAY_BUFFER, cubes_position_buffer)
+	glBufferData(GL_ARRAY_BUFFER, None, GL_STREAM_DRAW)
+	glBufferSubData(GL_ARRAY_BUFFER, 0, n_cubes * len(GLfloat) * 4, cubes_position_data)
+
+	# Opengl VBO cube color buffer bound, "orphaned", and filled with data
+	glBindBuffer(GL_ARRAY_BUFFER, cubes_color_buffer)
+	glBufferData(GL_ARRAY_BUFFER, None, GL_STREAM_DRAW)
+	glBufferSubData(GL_ARRAY_BUFFER, 0, n_cubes * len(GLfloat) * 4, cubes_color_data)
+
+	glUseProgram(shaders_program)
+
+        # 1st attribute buffer: vertices template
+        glEnableVertexAttribArray(0)
+        glBindBuffer(GL_ARRAY_BUFFER, vertex_template_buffer) # *
+        glVertexAttribPointer(0, 3, GL_FLOAT, False, 0, None)
+
+        # 2nd attribute buffer: cube positions
+        glEnableVertexAttribArray(1)
+        glBindBuffer(GL_ARRAY_BUFFER, cubes_position_buffer) # *
+        glVertexAttribPointer(1, 3, GL_FLOAT, False, 0, None) # xyz
+
+        # 3rd attribute buffer: cube colors
+        glEnableVertexAttribArray(2)
+        glBindBuffer(GL_ARRAY_BUFFER, cubes_color_buffer) # *
+        glVertexAttribPointer(2, 4, GL_FLOAT, True, 0, None) # rgba, normalized for unsigned char
+
+        # * ??????????
+        glVertexAttribDivisor(0, 0)
+	glVertexAttribDivisor(1, 1)
+	glVertexAttribDivisor(2, 1)
+
+        # Draw cubes
+	glDrawArraysInstanced(GL_TRIANGLES, 0, 4, n_cubes) # GL_TRIANGLE_STRIP
+
+	glDisableVertexAttribArray(0)
+	glDisableVertexAttribArray(1)
+	glDisableVertexAttribArray(2)
 
 def view():
 	global x_camera_pos, y_camera_pos
 	glTranslate(-x_camera_pos, -y_camera_pos, -z_camera_pos)
 	glRotate(yaw_camera_angle, 0, 1, 0)
 	glRotate(pitch_camera_angle, 1, 0, 0)
-
-
-def drawVBOs():
-	global vertex_position_buffer, vertex_color_buffer, vertex_color_data, vertex_count
-	global color_flag, shit
-	# Enable Vertex Arrays and Color Arrays
-	glEnableClientState(GL_VERTEX_ARRAY)
-	glEnableClientState(GL_COLOR_ARRAY)
-	
-	# Opengl vertex color buffer bound, filled with data, and set pointers to the data
-	glBindBuffer(GL_ARRAY_BUFFER, vertex_color_buffer)
-	
-	if color_flag ==  1:
-		for x, y, z, color in update_colors:
-			cubes[x][y][z].setColor(color)
-			offset = CUBE_DATA_SIZE * ( (x * n_cubes_y * n_cubes_z) + (y * n_cubes_z) + z)
-			data = np.array(cubes[x][y][z].getVertexColors(), dtype='f')
-			glBufferSubData(GL_ARRAY_BUFFER, offset, CUBE_DATA_SIZE, data)
-		glColorPointer(3, GL_FLOAT, 0, None)
-	
-	# Render
-	glDrawArrays(GL_TRIANGLES, 0, vertex_count)
-
-	# Disable Vertex Arrays and Color Arrays
-	glDisableClientState(GL_VERTEX_ARRAY)
-	glDisableClientState(GL_COLOR_ARRAY)
-
 
 def drawScene():
 	global width, height
@@ -143,19 +173,17 @@ def drawScene():
 	glLoadIdentity()	
 
 	view()
-#	updateCubes()
-	drawVBOs()
+	#updateCubes()
+	updateVBOs()
 
 	# Flush the opengl rendering pipeline	
 	glutSwapBuffers()	
-
 
 def keyPressed(key, x, y):
 	global x_camera_pos, y_camera_pos, z_camera_pos, yaw_camera_angle, pitch_camera_angle
 	global color_flag
 	if key == ESCAPE.encode():
-		glutDestroyWindow(window)
-		exit(0)
+                cleanup()
 	if key == 'd'.encode():
 		x_camera_pos += CAMERA_SPEED
 	if key == 'a'.encode():
@@ -180,41 +208,42 @@ def keyPressed(key, x, y):
 		color_flag = 1
 	glutPostRedisplay()
 
+def cleanup():
+        global shaders_program, vertex_template_buffer, cubes_position_buffer, cubes_color_buffer
+	glDeleteBuffers(1, cubes_color_buffer)
+	glDeleteBuffers(1, cubes_position_buffer)
+	glDeleteBuffers(1, vertex_template_buffer)
+	glDeleteProgram(shaders_program)
+# *	glDeleteVertexArrays(1, &VertexArrayID)
+        glutDestroyWindow(window)
+	exit(0)
 
 def main():
 	global window
-	# Initialize opengl
-	glutInit()
 	
-	# Type of Display mode: RGBA color, double buffer, alpha components, depth buffer
-	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_ALPHA | GLUT_DEPTH)
-
-	# Initialize window size
-	glutInitWindowSize(width, height)
-
-	# Window starts at upper left corner of screen
-	glutInitWindowPosition(0, 0)
-
-	# Create window with name "HTM"
-	window = glutCreateWindow("HTM")
-
-	# Register the drawing function with glut
-	glutDisplayFunc(drawScene)
-
-	#glutFillScreen()
-
-	# When doing nothing redraw scene
-	glutIdleFunc(drawScene)
-
-	# Register the function called when the keyboard is pressed
-	glutKeyboardFunc(keyPressed)
-	glutSpecialFunc(keyPressed)
-
-	# opengl initial setups
-	init()
-
-	# Start event processing engine
-	glutMainLoop()
-
+	glutInit()                              # Initialize opengl
+	glutInitDisplayMode(GLUT_RGBA   |       # RGBA color
+                            GLUT_DOUBLE |       # *Double Buffer
+                            GLUT_ALPHA  |       # Alpha Components
+                            GLUT_DEPTH)         # Depth Buffer
+	glutInitWindowSize(width, height)       # Initialize window size
+	glutInitWindowPosition(0, 0)            # Window at upper left corner of screen
+	window = glutCreateWindow("HTM")        # Create window with name "HTM"
+        glutDisplayFunc(drawScene)      	# Register the drawing function with glut
+	glutIdleFunc(drawScene)                 # *When doing nothing redraw scene
+	glutKeyboardFunc(keyPressed)            # Register function when keyboard pressed
+	glutSpecialFunc(keyPressed)             # Register function when keyboard pressed
+	glClearColor(0.0, 0.0, 0.0, 1.0)	# Black background
+	glClearDepth(1.0)			# Depth Buffer setup
+	glDepthFunc(GL_LESS)			# The type of Depth Testing
+	glEnable (GL_DEPTH_TEST)		# Enable Depth Testing
+	glShadeModel(GL_SMOOTH)			# Select Smooth Shading
+	glHint(GL_PERSPECTIVE_CORRECTION_HINT,
+               GL_NICEST)	                # *Set Perspective Calculations to most accurate
+	glColor4f(1.0, 6.0, 6.0, 1.0)           # *FIGURE OUT WHAT THIS DOES
+        initShaders()
+	initCubes()
+	initVBOs()
+	glutMainLoop()                          # Start event processing engine
 
 main()
