@@ -50,42 +50,39 @@ ESCAPE = '\x1b'
 color_flag = 0
 
 def initShaders():
-        global shaders_program
-        vertex_shader   = shader.compile_shader("vertex")
-        fragment_shader = shader.compile_shader("fragment")
-        shaders_program = shader.link_shader_program(vertex_shader, fragment_shader)     
+	global shaders_program
+	vertex_shader   = shader.compile_shader("vertex")
+	fragment_shader = shader.compile_shader("fragment")
+	shaders_program = shader.link_shader_program(vertex_shader, fragment_shader)     
 
 def initCubes():
-        global n_cubes_x, n_cubes_y, n_cubes_z, n_cubes, cubes_region, vertex_template_data, cubes_position_data, cubes_color_data
+	global n_cubes_x, n_cubes_y, n_cubes_z, n_cubes, cubes_region, vertex_template_data, cubes_position_data, cubes_color_data
 
-        CUBE_POSITION_DATA_SIZE = 3
-        CUBE_COLOR_DATA_SIZE = 4
-        CUBE_SPACING = 4
-        n_cubes_x = 20 # Typically 40 in HTM region
-        n_cubes_y = 10 # Typically 10 in HTM region
-        n_cubes_z = 20 # Typically 40 in HTM region
-        n_cubes   = n_cubes_x * n_cubes_y * n_cubes_z
-        cubes_region = [[[None]*n_cubes_z]*n_cubes_y]*n_cubes_x
+	CUBE_POSITION_DATA_SIZE = 3
+	CUBE_COLOR_DATA_SIZE = 4
+	CUBE_SPACING = 4
+	n_cubes_x = 20 # Typically 40 in HTM region
+	n_cubes_y = 10 # Typically 10 in HTM region
+	n_cubes_z = 20 # Typically 40 in HTM region
+	n_cubes   = n_cubes_x * n_cubes_y * n_cubes_z
+	cubes_region = [[[None]*n_cubes_z]*n_cubes_y]*n_cubes_x
 
-        position_list = [0] * n_cubes * CUBE_POSITION_DATA_SIZE
-        color_list = [0] * n_cubes * CUBE_COLOR_DATA_SIZE
+	position_list = [0] * n_cubes * CUBE_POSITION_DATA_SIZE
+	color_list = [0] * n_cubes * CUBE_COLOR_DATA_SIZE
 
-        for x, y, z in np.nindex(n_cubes_x, n_cubes_y, n_cubes_z):
-                i = ((x * n_cubes_y * n_cubes_z) + (y * n_cubes_z) + z)
-                cubes[x][y][z] = cube.Cube()
-		cubes[x][y][z].setPosition(0 + x * -CUBE_SPACING,
-                                           0 + y * -CUBE_SPACING,
-                                           0 + z * -CUBE_SPACING)
+	for x, y, z in np.nindex(n_cubes_x, n_cubes_y, n_cubes_z):
+		i = ((x * n_cubes_y * n_cubes_z) + (y * n_cubes_z) + z)
+		cubes[x][y][z] = cube.Cube()
+		cubes[x][y][z].setPosition(0 + x * -CUBE_SPACING, 0 + y * -CUBE_SPACING, 0 + z * -CUBE_SPACING)
+		position_list[i  ] = cubes[x][y][z].getPosition()[0] # x position
+		position_list[i+1] = cubes[x][y][z].getPosition()[1] # y position
+		position_list[i+2] = cubes[x][y][z].getPosition()[2] # z position
+		color_list[i  ] = cubes[x][y][z].getColor()[0] # r color
+		color_list[i+1] = cubes[x][y][z].getColor()[1] # g color
+		color_list[i+2] = cubes[x][y][z].getColor()[2] # b color
+		color_list[i+3] = cubes[x][y][z].getColor()[3] # a color
 
-                position_list[i  ] = cubes[x][y][z].getPosition()[0] # x position
-                position_list[i+1] = cubes[x][y][z].getPosition()[1] # y position
-                position_list[i+2] = cubes[x][y][z].getPosition()[2] # z position
-                color_list[i  ] = cubes[x][y][z].getColor()[0] # r color
-                color_list[i+1] = cubes[x][y][z].getColor()[1] # g color
-                color_list[i+2] = cubes[x][y][z].getColor()[2] # b color
-                color_list[i+3] = cubes[x][y][z].getColor()[3] # a color
-
-        vertex_template_data = np.array(cube.getVertexTemplate(), dtype='f')
+	vertex_template_data = np.array(cube.getVertexTemplate(), dtype='f')
 	cubes_position_data = np.array(position_list, dtype='f')
 	cubes_color_data = np.array(position_list, dtype='f')
 
@@ -108,11 +105,11 @@ def initVBOs():
 	glBufferData(GL_ARRAY_BUFFER, None, GL_STREAM_DRAW) #cubes_color_data
 
 def updateCubes():
-        global cubes
-        global color_flag
+	global cubes
+	global color_flag
 
-        if color_flag > 0:
-                cubes[0][0][0].setColor(0, 0, 1, 1)
+	if color_flag > 0:
+		cubes[0][0][0].setColor(0, 0, 1, 1)
                 
 def updateVBOs():
 	global n_cubes, shaders_program, cubes_position_buffer, cubes_color_buffer, cubes_position_data, cubes_color_data
@@ -129,27 +126,27 @@ def updateVBOs():
 
 	glUseProgram(shaders_program)
 
-        # 1st attribute buffer: vertices template
-        glEnableVertexAttribArray(0)
-        glBindBuffer(GL_ARRAY_BUFFER, vertex_template_buffer) # *
-        glVertexAttribPointer(0, 3, GL_FLOAT, False, 0, None)
+	# 1st attribute buffer: vertices template
+	glEnableVertexAttribArray(0)
+	glBindBuffer(GL_ARRAY_BUFFER, vertex_template_buffer) # *
+	glVertexAttribPointer(0, 3, GL_FLOAT, False, 0, None)
 
-        # 2nd attribute buffer: cube positions
-        glEnableVertexAttribArray(1)
-        glBindBuffer(GL_ARRAY_BUFFER, cubes_position_buffer) # *
-        glVertexAttribPointer(1, 3, GL_FLOAT, False, 0, None) # xyz
+	# 2nd attribute buffer: cube positions
+	glEnableVertexAttribArray(1)
+	glBindBuffer(GL_ARRAY_BUFFER, cubes_position_buffer) # *
+	glVertexAttribPointer(1, 3, GL_FLOAT, False, 0, None) # xyz
 
-        # 3rd attribute buffer: cube colors
-        glEnableVertexAttribArray(2)
-        glBindBuffer(GL_ARRAY_BUFFER, cubes_color_buffer) # *
-        glVertexAttribPointer(2, 4, GL_FLOAT, True, 0, None) # rgba, normalized for unsigned char
+	# 3rd attribute buffer: cube colors
+	glEnableVertexAttribArray(2)
+	glBindBuffer(GL_ARRAY_BUFFER, cubes_color_buffer) # *
+	glVertexAttribPointer(2, 4, GL_FLOAT, True, 0, None) # rgba, normalized for unsigned char
 
-        # * ??????????
-        glVertexAttribDivisor(0, 0)
+	# * ??????????
+	glVertexAttribDivisor(0, 0)
 	glVertexAttribDivisor(1, 1)
 	glVertexAttribDivisor(2, 1)
 
-        # Draw cubes
+	# Draw cubes
 	glDrawArraysInstanced(GL_TRIANGLES, 0, 4, n_cubes) # GL_TRIANGLE_STRIP
 
 	glDisableVertexAttribArray(0)
@@ -183,7 +180,7 @@ def keyPressed(key, x, y):
 	global x_camera_pos, y_camera_pos, z_camera_pos, yaw_camera_angle, pitch_camera_angle
 	global color_flag
 	if key == ESCAPE.encode():
-                cleanup()
+		cleanup()
 	if key == 'd'.encode():
 		x_camera_pos += CAMERA_SPEED
 	if key == 'a'.encode():
@@ -209,39 +206,39 @@ def keyPressed(key, x, y):
 	glutPostRedisplay()
 
 def cleanup():
-        global shaders_program, vertex_template_buffer, cubes_position_buffer, cubes_color_buffer
+	global shaders_program, vertex_template_buffer, cubes_position_buffer, cubes_color_buffer
 	glDeleteBuffers(1, cubes_color_buffer)
 	glDeleteBuffers(1, cubes_position_buffer)
 	glDeleteBuffers(1, vertex_template_buffer)
 	glDeleteProgram(shaders_program)
 # *	glDeleteVertexArrays(1, &VertexArrayID)
-        glutDestroyWindow(window)
+	glutDestroyWindow(window)
 	exit(0)
 
 def main():
 	global window
 	
-	glutInit()                              # Initialize opengl
-	glutInitDisplayMode(GLUT_RGBA   |       # RGBA color
-                            GLUT_DOUBLE |       # *Double Buffer
-                            GLUT_ALPHA  |       # Alpha Components
-                            GLUT_DEPTH)         # Depth Buffer
-	glutInitWindowSize(width, height)       # Initialize window size
-	glutInitWindowPosition(0, 0)            # Window at upper left corner of screen
-	window = glutCreateWindow("HTM")        # Create window with name "HTM"
-        glutDisplayFunc(drawScene)      	# Register the drawing function with glut
-	glutIdleFunc(drawScene)                 # *When doing nothing redraw scene
-	glutKeyboardFunc(keyPressed)            # Register function when keyboard pressed
-	glutSpecialFunc(keyPressed)             # Register function when keyboard pressed
-	glClearColor(0.0, 0.0, 0.0, 1.0)	# Black background
-	glClearDepth(1.0)			# Depth Buffer setup
-	glDepthFunc(GL_LESS)			# The type of Depth Testing
-	glEnable (GL_DEPTH_TEST)		# Enable Depth Testing
-	glShadeModel(GL_SMOOTH)			# Select Smooth Shading
+	glutInit()								# Initialize opengl
+	glutInitDisplayMode(GLUT_RGBA   |		# RGBA color
+						GLUT_DOUBLE |		# *Double Buffer
+						GLUT_ALPHA  |		# Alpha Components
+						GLUT_DEPTH)  		# Depth Buffer
+	glutInitWindowSize(width, height)		# Initialize window size
+	glutInitWindowPosition(0, 0)			# Window at upper left corner of screen
+	window = glutCreateWindow("HTM")		# Create window with name "HTM"
+	glutDisplayFunc(drawScene)				# Register the drawing function with glut
+	glutIdleFunc(drawScene)					# *When doing nothing redraw scene
+	glutKeyboardFunc(keyPressed)			# Register function when keyboard pressed
+	glutSpecialFunc(keyPressed)				# Register function when keyboard pressed
+	glClearColor(0.0, 0.0, 0.0, 1.0)		# Black background
+	glClearDepth(1.0)						# Depth Buffer setup
+	glDepthFunc(GL_LESS)					# The type of Depth Testing
+	glEnable (GL_DEPTH_TEST)				# Enable Depth Testing
+	glShadeModel(GL_SMOOTH)					# Select Smooth Shading
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT,
                GL_NICEST)	                # *Set Perspective Calculations to most accurate
-	glColor4f(1.0, 6.0, 6.0, 1.0)           # *FIGURE OUT WHAT THIS DOES
-        initShaders()
+	glColor4f(1.0, 6.0, 6.0, 1.0)			# *FIGURE OUT WHAT THIS DOES
+	initShaders()
 	initCubes()
 	initVBOs()
 	glutMainLoop()                          # Start event processing engine

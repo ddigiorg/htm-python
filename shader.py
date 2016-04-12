@@ -10,7 +10,7 @@ from OpenGL.GL import *
 
 # Vertex shader
 VertexShader = """
-#version 330 core
+#version 300 core
 
 // Input vertex data
 layout(location = 0) in vec3 squareVertices; //* UPDATE WITH TEMPLATE STUFF
@@ -37,7 +37,7 @@ void main()
 
 # Fragment shader
 FragmentShader = """
-#version 330 core
+#version 300 core
 
 // 4D vector containing RGBA components of pixel color
 in vec4 in_color;
@@ -53,30 +53,30 @@ void main(){
 
 # Compile a vertex or fragment shader from source
 def compile_shader(name):
-    global VertexShader, FragmentShader
-    if name == "vertex":
-        source = VertexShader
-        shader_type = GL_VERTEX_SHADER
-    elif name == "fragment":
-        source = FragmentShader
-        shader_type = GL_FRAGMENT_SHADER        
-    shader = glCreateShader(shader_type)
-    glShaderSource(shader, source)
-    glCompileShader(shader)
-    # check compilation error
-    result = glGetShaderiv(shader, GL_COMPILE_STATUS)
-    if not(result):
-        raise RuntimeError(glGetShaderInfoLog(shader))
-    return shader
+	global VertexShader, FragmentShader
+	if name == "vertex":
+		source = VertexShader
+		shader_type = GL_VERTEX_SHADER
+	elif name == "fragment":
+		source = FragmentShader
+		shader_type = GL_FRAGMENT_SHADER        
+	shader = glCreateShader(shader_type)
+	glShaderSource(shader, source)
+	glCompileShader(shader)
+	# check compilation error
+	result = glGetShaderiv(shader, GL_COMPILE_STATUS)
+	if not(result):
+		raise RuntimeError(glGetShaderInfoLog(shader))
+	return shader
 
 # Create a shader program with from compiled shaders
 def link_shader_program(vertex_shader, fragment_shader):
-    program = glCreateProgram()
-    glAttachShader(program, vertex_shader)
-    glAttachShader(program, fragment_shader)
-    glLinkProgram(program)
-    # check linking error
-    result = glGetProgramiv(program, GL_LINK_STATUS)
-    if not(result):
-        raise RuntimeError(glGetProgramInfoLog(program))
-    return program
+	program = glCreateProgram()
+	glAttachShader(program, vertex_shader)
+	glAttachShader(program, fragment_shader)
+	glLinkProgram(program)
+	# check linking error
+	result = glGetProgramiv(program, GL_LINK_STATUS)
+	if not(result):
+		raise RuntimeError(glGetProgramInfoLog(program))
+	return program
