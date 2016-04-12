@@ -10,7 +10,7 @@ from OpenGL.GL import *
 
 # Vertex shader
 VertexShader = """
-#version 300 core
+#version 130 core
 
 // Input vertex data
 layout(location = 0) in vec3 squareVertices; //* UPDATE WITH TEMPLATE STUFF
@@ -37,7 +37,7 @@ void main()
 
 # Fragment shader
 FragmentShader = """
-#version 300 core
+#version 130 core
 
 // 4D vector containing RGBA components of pixel color
 in vec4 in_color;
