@@ -1,6 +1,7 @@
-#archlinux: certain opengl functions won't work on Windows without extensive tinkering
-#python 3.5.1
-#pyopengl 3.1
+# archlinux: certain opengl functions won't work on Windows without extensive tinkering
+# python 3.5.1
+# pyopengl 3.1 (3.0 Mesa 11.1.2)
+# glsl 1.30
 
 # *NOTE: CHECK IF APPLICABLE
 # http://www.opengl-tutorial.org/intermediate-tutorials/billboards-particles/particles-instancing/
