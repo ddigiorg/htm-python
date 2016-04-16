@@ -4,6 +4,9 @@ from OpenGL.GL import *
 from OpenGL.GLU import * # *
 
 def getVertexTemplate():
+
+	vertex_template = [ -1.0, 1.0, -5.0, 1.0, -1.0, -5.0, 0.0, 1.0, -5.0]
+	'''
 	vertex_template = [
 		 1.0,  1.0,  1.0,  1.0,  1.0, -1.0, -1.0,  1.0, -1.0,
 		 1.0,  1.0,  1.0, -1.0,  1.0, -1.0, -1.0,  1.0,  1.0,
@@ -17,7 +20,7 @@ def getVertexTemplate():
 		 1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0, -1.0,  1.0,
 		 1.0, -1.0,  1.0, -1.0, -1.0, -1.0,  1.0, -1.0, -1.0,
 		 1.0, -1.0,  1.0, -1.0, -1.0,  1.0, -1.0, -1.0, -1.0] 
-	
+	'''	
 	return vertex_template
 
 class Cube:

@@ -1,6 +1,6 @@
 # archlinux: certain opengl functions won't work on Windows without extensive tinkering
 # python 3.5.1
-# pyopengl 3.1 (3.0 Mesa 11.1.2)
+# pyopengl 3.0 Mesa 11.1.2
 # glsl 1.30
 
 # *NOTE: CHECK IF APPLICABLE
@@ -10,6 +10,7 @@
 from OpenGL.GL import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
+import sys
 import numpy as np
 import cube as cube
 import shader as shader
@@ -36,7 +37,10 @@ yaw_camera_angle   = 0.0
 pitch_camera_angle = 0.0
 
 # Shader global variables
-shaders_program        = None
+shaders_program           = None
+shaders_template_location = None
+shaders_position_location = None
+shaders_color_location    = None
 
 # VBO global variables
 vertex_template_buffer = None
@@ -45,16 +49,23 @@ cubes_color_buffer     = None
 cubes_template_data    = None
 cubes_position_data    = None
 cubes_color_data       = None
+VERTEX_SIZE            = 3
+POSITION_SIZE          = 3 # xyz
+COLOR_SIZE             = 4 # rgba
 
 # Keyboard global variables
 ESCAPE = '\x1b'
 color_flag = 0
 
 def initShaders():
-	global shaders_program
+	global shaders_program, shaders_template_location, shaders_position_location, shaders_color_location
 	vertex_shader   = shader.compile_shader("vertex")
 	fragment_shader = shader.compile_shader("fragment")
 	shaders_program = shader.link_shader_program(vertex_shader, fragment_shader)     
+
+	shaders_template_location = glGetAttribLocation(shaders_program, "template_vertices")
+	shaders_position_location = glGetAttribLocation(shaders_program, "vertex_in_cube_position")
+	shaders_color_location    = glGetAttribLocation(shaders_program, "vertex_in_cube_color")
 
 def initCubes():
 	global n_cubes_x, n_cubes_y, n_cubes_z, n_cubes, cubes_region, vertex_template_data, cubes_position_data, cubes_color_data
@@ -62,30 +73,34 @@ def initCubes():
 	CUBE_POSITION_DATA_SIZE = 3
 	CUBE_COLOR_DATA_SIZE = 4
 	CUBE_SPACING = 4
-	n_cubes_x = 20 # Typically 40 in HTM region
-	n_cubes_y = 10 # Typically 10 in HTM region
-	n_cubes_z = 20 # Typically 40 in HTM region
+	n_cubes_x = 1 # Typically 40 in HTM region
+	n_cubes_y = 1 # Typically 10 in HTM region
+	n_cubes_z = 1 # Ty 40 in HTM region
 	n_cubes   = n_cubes_x * n_cubes_y * n_cubes_z
 	cubes_region = [[[None]*n_cubes_z]*n_cubes_y]*n_cubes_x
 
 	position_list = [0] * n_cubes * CUBE_POSITION_DATA_SIZE
-	color_list = [0] * n_cubes * CUBE_COLOR_DATA_SIZE
+	color_list    = [0] * n_cubes * CUBE_COLOR_DATA_SIZE
+	
+	i = 0
+	for x in range(n_cubes_x):
+		for y in range(n_cubes_y):
+			for z in range(n_cubes_z):	
+				cubes_region[x][y][z] = cube.Cube()
+				cubes_region[x][y][z].setPosition(0 + x * -CUBE_SPACING, 0 + y * -CUBE_SPACING, 0 + z * -CUBE_SPACING)
+				
+				position_list[i*POSITION_SIZE  ] = cubes_region[x][y][z].getPosition()[0] # x position
+				position_list[i*POSITION_SIZE+1] = cubes_region[x][y][z].getPosition()[1] # y position
+				position_list[i*POSITION_SIZE+2] = cubes_region[x][y][z].getPosition()[2] # z position
+				color_list[i*COLOR_SIZE  ] = cubes_region[x][y][z].getColor()[0] # r color
+				color_list[i*COLOR_SIZE+1] = cubes_region[x][y][z].getColor()[1] # g color
+				color_list[i*COLOR_SIZE+2] = cubes_region[x][y][z].getColor()[2] # b color
+				color_list[i*COLOR_SIZE+3] = cubes_region[x][y][z].getColor()[3] # a color
+				i += 1
 
-	for x, y, z in np.nindex(n_cubes_x, n_cubes_y, n_cubes_z):
-		i = ((x * n_cubes_y * n_cubes_z) + (y * n_cubes_z) + z)
-		cubes[x][y][z] = cube.Cube()
-		cubes[x][y][z].setPosition(0 + x * -CUBE_SPACING, 0 + y * -CUBE_SPACING, 0 + z * -CUBE_SPACING)
-		position_list[i  ] = cubes[x][y][z].getPosition()[0] # x position
-		position_list[i+1] = cubes[x][y][z].getPosition()[1] # y position
-		position_list[i+2] = cubes[x][y][z].getPosition()[2] # z position
-		color_list[i  ] = cubes[x][y][z].getColor()[0] # r color
-		color_list[i+1] = cubes[x][y][z].getColor()[1] # g color
-		color_list[i+2] = cubes[x][y][z].getColor()[2] # b color
-		color_list[i+3] = cubes[x][y][z].getColor()[3] # a color
-
-	vertex_template_data = np.array(cube.getVertexTemplate(), dtype='f')
-	cubes_position_data = np.array(position_list, dtype='f')
-	cubes_color_data = np.array(position_list, dtype='f')
+	vertex_template_data = np.array(cube.getVertexTemplate(), dtype=np.float32)
+	cubes_position_data = np.array(position_list, dtype=np.float32)
+	cubes_color_data = np.array(position_list, dtype=np.float32)
 
 def initVBOs():
 	global vertex_template_buffer, cubes_position_buffer, cubes_color_buffer, cubes_template_data
@@ -97,7 +112,7 @@ def initVBOs():
 
 	# Opengl VBO cube position buffer created, bound, and left empty
 	cubes_position_buffer = glGenBuffers(1)
-	glBindBuffer(GL_ARRAY_BUFFER, cubes_position_buffer)
+	glBintttttt(GL_ARRAY_BUFFER, cubes_position_buffer)
 	glBufferData(GL_ARRAY_BUFFER, None, GL_STREAM_DRAW) # cubes_position_data   GL_STATIC_DRAW
 
 	# Opengl VBO cube color buffer created, bound, and left empty
@@ -113,34 +128,35 @@ def updateCubes():
 		cubes[0][0][0].setColor(0, 0, 1, 1)
                 
 def updateVBOs():
-	global n_cubes, shaders_program, cubes_position_buffer, cubes_color_buffer, cubes_position_data, cubes_color_data
+	global n_cubes, cubes_position_buffer, cubes_color_buffer, cubes_position_data, cubes_color_data
+	global shaders_program, shaders_template_location, shaders_position_location, shaders_color_location
 
 	# Opengl VBO cube position buffer bound, "orphaned", and filled with data
 	glBindBuffer(GL_ARRAY_BUFFER, cubes_position_buffer)
-	glBufferData(GL_ARRAY_BUFFER, None, GL_STREAM_DRAW)
-	glBufferSubData(GL_ARRAY_BUFFER, 0, n_cubes * len(GLfloat) * 4, cubes_position_data)
+	glBufferData(GL_ARRAY_BUFFER, cubes_position_data, GL_STREAM_DRAW)
+	#glBufferSubData(GL_ARRAY_BUFFER, 0, 32, cubes_position_data)
 
 	# Opengl VBO cube color buffer bound, "orphaned", and filled with data
 	glBindBuffer(GL_ARRAY_BUFFER, cubes_color_buffer)
-	glBufferData(GL_ARRAY_BUFFER, None, GL_STREAM_DRAW)
-	glBufferSubData(GL_ARRAY_BUFFER, 0, n_cubes * len(GLfloat) * 4, cubes_color_data)
+	glBufferData(GL_ARRAY_BUFFER, cubes_color_data, GL_STREAM_DRAW)
+	#glBufferSubData(GL_ARRAY_BUFFER, 0, n_cubes * sys.getsizeof(GLfloat) * 4, cubes_color_data)
 
 	glUseProgram(shaders_program)
 
 	# 1st attribute buffer: vertices template
-	glEnableVertexAttribArray(0)
+	glEnableVertexAttribArray(shaders_template_location)
 	glBindBuffer(GL_ARRAY_BUFFER, vertex_template_buffer) # *
-	glVertexAttribPointer(0, 3, GL_FLOAT, False, 0, None)
+	glVertexAttribPointer(shaders_template_location, VERTEX_SIZE, GL_FLOAT, False, 0, None)
 
 	# 2nd attribute buffer: cube positions
-	glEnableVertexAttribArray(1)
+	glEnableVertexAttribArray(shaders_position_location)
 	glBindBuffer(GL_ARRAY_BUFFER, cubes_position_buffer) # *
-	glVertexAttribPointer(1, 3, GL_FLOAT, False, 0, None) # xyz
+	glVertexAttribPointer(shaders_position_location, POSITION_SIZE, GL_FLOAT, False, 0, None)
 
 	# 3rd attribute buffer: cube colors
-	glEnableVertexAttribArray(2)
+	glEnableVertexAttribArray(shaders_color_location)
 	glBindBuffer(GL_ARRAY_BUFFER, cubes_color_buffer) # *
-	glVertexAttribPointer(2, 4, GL_FLOAT, True, 0, None) # rgba, normalized for unsigned char
+	glVertexAttribPointer(shaders_color_location, COLOR_SIZE, GL_FLOAT, True, 0, None) # normalized for unsigned char
 
 	# * ??????????
 	glVertexAttribDivisor(0, 0)
@@ -148,11 +164,11 @@ def updateVBOs():
 	glVertexAttribDivisor(2, 1)
 
 	# Draw cubes
-	glDrawArraysInstanced(GL_TRIANGLES, 0, 4, n_cubes) # GL_TRIANGLE_STRIP
+	glDrawArraysInstanced(GL_TRIANGLES, 0, 3, n_cubes) # GL_TRIANGLE_STRIP
 
-	glDisableVertexAttribArray(0)
-	glDisableVertexAttribArray(1)
-	glDisableVertexAttribArray(2)
+	glDisableVertexAttribArray(shaders_template_location)
+	glDisableVertexAttribArray(shaders_position_location)
+	glDisableVertexAttribArray(shaders_color_location)
 
 def view():
 	global x_camera_pos, y_camera_pos
@@ -208,9 +224,9 @@ def keyPressed(key, x, y):
 
 def cleanup():
 	global shaders_program, vertex_template_buffer, cubes_position_buffer, cubes_color_buffer
-	glDeleteBuffers(1, cubes_color_buffer)
-	glDeleteBuffers(1, cubes_position_buffer)
-	glDeleteBuffers(1, vertex_template_buffer)
+	glDeleteBuffers(1, GLfloat(cubes_color_buffer))
+	glDeleteBuffers(1, GLfloat(cubes_position_buffer))
+	glDeleteBuffers(1, GLfloat(vertex_template_buffer))
 	glDeleteProgram(shaders_program)
 # *	glDeleteVertexArrays(1, &VertexArrayID)
 	glutDestroyWindow(window)

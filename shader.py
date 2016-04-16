@@ -1,53 +1,57 @@
 # archlinux: certain opengl functions won't work on Windows without extensive tinkering
 # python 3.5.1
-# pyopengl 3.1
+# pyopengl 3.0 Mesa 11.1.2
+# glsl 1.30
 
 # http://cyrille.rossant.net/shaders-opengl/
 
 from OpenGL.GL import *
-#from OpenGL.GLUT import *
-#from OpenGL.GLU import *
 
 # Vertex shader
 VertexShader = """
-#version 130 core
+#version 130
 
-// Input vertex data
-layout(location = 0) in vec3 squareVertices; //* UPDATE WITH TEMPLATE STUFF
-layout(location = 1) in vec3 xyz;
-layout(location = 2) in vec4 in_color;
+in vec3 vertex_template;
+in vec3 vertex_position;
+in vec3 vertex_color_in;
 
-// Output data
-out vec4 out_color;
+out vec3 vertex_color_out;
 
 void main()
 {
-	float particleSize = xyz.w; // because we encoded it this way.
-	vec3 particleCenter_wordspace = xyz.xyz;
-	
-	vec3 vertexPosition_worldspace = particleCenter_wordspace + squareVertices.x + squareVertices.y;
-
 	// Output position of the vertex
-	gl_Position = vec4(vertexPosition_worldspace, 1.0f);
+	// gl_Position.xyz = vertex_template * vertex_position;
+	// gl_Position.w = 1.0;
+	// gl_Position = vec4(vertex_in_cube_position, 1.0f);
+
+	vec3 shit = vertex_template.xyz + vertex_position.xyz;
+	gl_Position = vec4(shit, 1.0f);
 
 	// Output color
-	out_color = in_color;
+	// vertex_out_cube_color = vertex_in_cube_color;
+	vertex_color_out = vertex_color_in;
 }
 """
 
 # Fragment shader
 FragmentShader = """
-#version 130 core
+#version 130
 
 // 4D vector containing RGBA components of pixel color
-in vec4 in_color;
+//in vec4 vertex_out_cube_color;
+
+in vec3 vertex_color_out;
 
 // 4D vector containing RGBA components of pixel color
-out vec4 out_color;
+//out vec4 fragment_out_cube_color;
+
+out vec3 color;
 
 void main(){
 	// Output color = color of the texture at the specified UV
-	out_color = in_color;
+	// fragment_out_cube_color = vertex_out_cube_color;
+
+	color = vertex_color_out;
 }
 """
 
