@@ -6,6 +6,7 @@
 # *NOTE: CHECK IF APPLICABLE
 # http://www.opengl-tutorial.org/intermediate-tutorials/billboards-particles/particles-instancing/
 # https://github.com/opengl-tutorials/ogl/blob/master/tutorial18_billboards_and_particles/tutorial18_particles.cpp
+# http://duriansoftware.com/joe/An-intro-to-modern-OpenGL.-Chapter-3:-3D-transformation-and-projection.html
 
 from OpenGL.GL import *
 from OpenGL.GLUT import *
@@ -18,7 +19,6 @@ import shader as shader
 # Main global variables
 window = 0
 width, height = 800, 600
-aspect_ratio = width/height
 
 # Cube global variables
 n_cubes_x    = None
@@ -28,97 +28,121 @@ n_cubes      = None
 cubes_region = None
 
 # Camera global variables
-CAMERA_SPEED       = 5.0
-CAMERA_ANGLE       = 10.0
+frustum_matrix     = None
+view_matrix        = None
 x_camera_pos       = 0.0
 y_camera_pos       = 0.0
 z_camera_pos       = 10.0
 yaw_camera_angle   = 0.0
 pitch_camera_angle = 0.0
+CAMERA_SPEED       = 5.0
+CAMERA_ANGLE       = 10.0
+
 
 # Shader global variables
-shaders_program           = None
+shaders_programID         = None
+shaders_frustumID         = None
+shaders_viewID            = None
 shaders_template_location = None
 shaders_position_location = None
 shaders_color_location    = None
 
 # VBO global variables
-vertex_template_buffer = None
-cubes_position_buffer  = None
-cubes_color_buffer     = None
-cubes_template_data    = None
-cubes_position_data    = None
-cubes_color_data       = None
-VERTEX_SIZE            = 3
-POSITION_SIZE          = 3 # xyz
-COLOR_SIZE             = 4 # rgba
+template_buffer  = None
+position_buffer  = None
+color_buffer     = None
+template_data    = None
+position_data    = None
+color_data       = None
+VERTEX_SIZE      = 3
+POSITION_SIZE    = 3 # xyz
+COLOR_SIZE       = 3 # rgb
 
 # Keyboard global variables
 ESCAPE = '\x1b'
 color_flag = 0
 
-def initShaders():
-	global shaders_program, shaders_template_location, shaders_position_location, shaders_color_location
-	vertex_shader   = shader.compile_shader("vertex")
-	fragment_shader = shader.compile_shader("fragment")
-	shaders_program = shader.link_shader_program(vertex_shader, fragment_shader)     
-
-	shaders_template_location = glGetAttribLocation(shaders_program, "template_vertices")
-	shaders_position_location = glGetAttribLocation(shaders_program, "vertex_in_cube_position")
-	shaders_color_location    = glGetAttribLocation(shaders_program, "vertex_in_cube_color")
 
 def initCubes():
-	global n_cubes_x, n_cubes_y, n_cubes_z, n_cubes, cubes_region, vertex_template_data, cubes_position_data, cubes_color_data
+	global n_cubes_x, n_cubes_y, n_cubes_z, n_cubes, cubes_region, template_data, position_data, color_data
 
-	CUBE_POSITION_DATA_SIZE = 3
-	CUBE_COLOR_DATA_SIZE = 4
 	CUBE_SPACING = 4
-	n_cubes_x = 1 # Typically 40 in HTM region
-	n_cubes_y = 1 # Typically 10 in HTM region
-	n_cubes_z = 1 # Ty 40 in HTM region
+	n_cubes_x = 2 # Typically 40 in HTM region
+	n_cubes_y = 2 # Typically 10 in HTM region
+	n_cubes_z = 2 # Ty 40 in HTM region
 	n_cubes   = n_cubes_x * n_cubes_y * n_cubes_z
 	cubes_region = [[[None]*n_cubes_z]*n_cubes_y]*n_cubes_x
 
-	position_list = [0] * n_cubes * CUBE_POSITION_DATA_SIZE
-	color_list    = [0] * n_cubes * CUBE_COLOR_DATA_SIZE
+	position_list = [0] * n_cubes * POSITION_SIZE
+	color_list    = [0] * n_cubes * COLOR_SIZE
 	
 	i = 0
 	for x in range(n_cubes_x):
 		for y in range(n_cubes_y):
 			for z in range(n_cubes_z):	
 				cubes_region[x][y][z] = cube.Cube()
-				cubes_region[x][y][z].setPosition(0 + x * -CUBE_SPACING, 0 + y * -CUBE_SPACING, 0 + z * -CUBE_SPACING)
+				cubes_region[x][y][z].setPosition(0. + x * -CUBE_SPACING, 0. + y * -CUBE_SPACING, 0. + z * -CUBE_SPACING)
 				
-				position_list[i*POSITION_SIZE  ] = cubes_region[x][y][z].getPosition()[0] # x position
-				position_list[i*POSITION_SIZE+1] = cubes_region[x][y][z].getPosition()[1] # y position
-				position_list[i*POSITION_SIZE+2] = cubes_region[x][y][z].getPosition()[2] # z position
-				color_list[i*COLOR_SIZE  ] = cubes_region[x][y][z].getColor()[0] # r color
-				color_list[i*COLOR_SIZE+1] = cubes_region[x][y][z].getColor()[1] # g color
-				color_list[i*COLOR_SIZE+2] = cubes_region[x][y][z].getColor()[2] # b color
-				color_list[i*COLOR_SIZE+3] = cubes_region[x][y][z].getColor()[3] # a color
+				position = cubes_region[x][y][z].getPosition()
+				position_list[i*POSITION_SIZE  ] = position[0] # x position
+				position_list[i*POSITION_SIZE+1] = position[1] # y position
+				position_list[i*POSITION_SIZE+2] = position[2] # z position
+			
+				color = cubes_region[x][y][z].getColor()
+				color_list[i*COLOR_SIZE  ] = color[0] # r color
+				color_list[i*COLOR_SIZE+1] = color[1] # g color
+				color_list[i*COLOR_SIZE+2] = color[2] # b color
+				
 				i += 1
 
-	vertex_template_data = np.array(cube.getVertexTemplate(), dtype=np.float32)
-	cubes_position_data = np.array(position_list, dtype=np.float32)
-	cubes_color_data = np.array(position_list, dtype=np.float32)
+	template_data = np.array(cube.getVertexTemplate(), dtype=np.float32)
+	position_data = np.array(position_list, dtype=np.float32)
+	color_data = np.array(color_list, dtype=np.float32)
+
+def initShaders():
+	global shaders_programID, shaders_frustumID, shaders_viewID, shaders_template_location, shaders_position_location, shaders_color_location
+	vertex_shader   = shader.compile_shader("VS")
+	fragment_shader = shader.compile_shader("FS")
+	shaders_programID = shader.link_shader_program(vertex_shader, fragment_shader)     
+
+	shaders_template_location = glGetAttribLocation(shaders_programID, "templateVS")
+	shaders_position_location = glGetAttribLocation(shaders_programID, "positionVS")
+	shaders_color_location    = glGetAttribLocation(shaders_programID, "colorVS_in")
+
+	shaders_frustumID = glGetUniformLocation(shaders_programID, "frustum")
+	shaders_viewID = glGetUniformLocation(shaders_programID, "view" )
+
+def initCamera():
+	global width, height
+	global frustum_matrix
+	view_angle = 45.0
+	aspect_ratio = width/height
+	z_near = 1.0
+	z_far  = 100.0
+	
+	frustum_matrix = [1.0/np.tan(view_angle), 0.0,                             0.0,                              0.0,
+					  0.0,                    aspect_ratio/np.tan(view_angle), 0.0,                              0.0,
+					  0,0,                    0.0,                             (z_far+z_near)/(z_far-z_near),    0.0,
+					  0.0,                    0.0,                             -2.0*z_far*z_near/(z_far-z_near), 0.0]
+
 
 def initVBOs():
-	global vertex_template_buffer, cubes_position_buffer, cubes_color_buffer, cubes_template_data
+	global template_buffer, position_buffer, color_buffer, template_data
       
 	# Opengl VBO vertex template buffer created, bound, and filled with data
-	vertex_template_buffer = glGenBuffers(1)
-	glBindBuffer(GL_ARRAY_BUFFER, vertex_template_buffer)
-	glBufferData(GL_ARRAY_BUFFER, vertex_template_data, GL_STATIC_DRAW)
+	template_buffer = glGenBuffers(1)
+	glBindBuffer(GL_ARRAY_BUFFER, template_buffer)
+	glBufferData(GL_ARRAY_BUFFER, template_data, GL_STATIC_DRAW)
 
 	# Opengl VBO cube position buffer created, bound, and left empty
-	cubes_position_buffer = glGenBuffers(1)
-	glBintttttt(GL_ARRAY_BUFFER, cubes_position_buffer)
-	glBufferData(GL_ARRAY_BUFFER, None, GL_STREAM_DRAW) # cubes_position_data   GL_STATIC_DRAW
+	position_buffer = glGenBuffers(1)
+	glBindBuffer(GL_ARRAY_BUFFER, position_buffer)
+	glBufferData(GL_ARRAY_BUFFER, None, GL_STREAM_DRAW) # position_data   GL_STATIC_DRAW
 
 	# Opengl VBO cube color buffer created, bound, and left empty
-	cubes_color_buffer = glGenBuffers(1)
-	glBindBuffer(GL_ARRAY_BUFFER, cubes_color_buffer)
-	glBufferData(GL_ARRAY_BUFFER, None, GL_STREAM_DRAW) #cubes_color_data
+	color_buffer = glGenBuffers(1)
+	glBindBuffer(GL_ARRAY_BUFFER, color_buffer)
+	glBufferData(GL_ARRAY_BUFFER, None, GL_STREAM_DRAW)
 
 def updateCubes():
 	global cubes
@@ -126,69 +150,68 @@ def updateCubes():
 
 	if color_flag > 0:
 		cubes[0][0][0].setColor(0, 0, 1, 1)
-                
-def updateVBOs():
-	global n_cubes, cubes_position_buffer, cubes_color_buffer, cubes_position_data, cubes_color_data
-	global shaders_program, shaders_template_location, shaders_position_location, shaders_color_location
+
+def updateCamera():
+	global view_matrix
+	view_matrix = [1.0,          0.0,          0.0,          0.0,
+				   0.0,          1.0,          0.0,          0.0,
+				   0.0,          0.0,          1.0,          0.0,
+				   x_camera_pos, y_camera_pos, z_camera_pos, 1.0]
+
+def drawScene():
+	global n_cubes, position_buffer, color_buffer, position_data, color_data
+	global shaders_programID, shaders_frustumID, shaders_viewID, shaders_template_location, shaders_position_location, shaders_color_location
+	global frustum_matrix, view_matrix
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+	
+	#updateCubes()
+	updateCamera()
 
 	# Opengl VBO cube position buffer bound, "orphaned", and filled with data
-	glBindBuffer(GL_ARRAY_BUFFER, cubes_position_buffer)
-	glBufferData(GL_ARRAY_BUFFER, cubes_position_data, GL_STREAM_DRAW)
-	#glBufferSubData(GL_ARRAY_BUFFER, 0, 32, cubes_position_data)
+	glBindBuffer(GL_ARRAY_BUFFER, position_buffer)
+	glBufferData(GL_ARRAY_BUFFER, position_data, GL_STREAM_DRAW)
+	#glBufferSubData(GL_ARRAY_BUFFER, 0, 32, position_data)
 
 	# Opengl VBO cube color buffer bound, "orphaned", and filled with data
-	glBindBuffer(GL_ARRAY_BUFFER, cubes_color_buffer)
-	glBufferData(GL_ARRAY_BUFFER, cubes_color_data, GL_STREAM_DRAW)
-	#glBufferSubData(GL_ARRAY_BUFFER, 0, n_cubes * sys.getsizeof(GLfloat) * 4, cubes_color_data)
+	glBindBuffer(GL_ARRAY_BUFFER, color_buffer)
+	glBufferData(GL_ARRAY_BUFFER, color_data, GL_STREAM_DRAW)
+	#glBufferSubData(GL_ARRAY_BUFFER, 0, n_cubes * sys.getsizeof(GLfloat) * 4, color_data)
 
-	glUseProgram(shaders_program)
+	# Get shader ID
+	glUseProgram(shaders_programID)
+	
+	# Update shader with frustum and view matrix
+	glUniformMatrix4fv(shaders_frustumID, 1, False, frustum_matrix)
+	glUniformMatrix4fv(shaders_viewID, 1, False, view_matrix)
 
-	# 1st attribute buffer: vertices template
+	# Shader attribute buffer: vertices template
 	glEnableVertexAttribArray(shaders_template_location)
-	glBindBuffer(GL_ARRAY_BUFFER, vertex_template_buffer) # *
+	glBindBuffer(GL_ARRAY_BUFFER, template_buffer) # *
 	glVertexAttribPointer(shaders_template_location, VERTEX_SIZE, GL_FLOAT, False, 0, None)
 
-	# 2nd attribute buffer: cube positions
+	# Shader attribute buffer: cube positions
 	glEnableVertexAttribArray(shaders_position_location)
-	glBindBuffer(GL_ARRAY_BUFFER, cubes_position_buffer) # *
+	glBindBuffer(GL_ARRAY_BUFFER, position_buffer) # *
 	glVertexAttribPointer(shaders_position_location, POSITION_SIZE, GL_FLOAT, False, 0, None)
 
-	# 3rd attribute buffer: cube colors
+	# Shader attribute buffer: cube colors
 	glEnableVertexAttribArray(shaders_color_location)
-	glBindBuffer(GL_ARRAY_BUFFER, cubes_color_buffer) # *
+	glBindBuffer(GL_ARRAY_BUFFER, color_buffer) # *
 	glVertexAttribPointer(shaders_color_location, COLOR_SIZE, GL_FLOAT, True, 0, None) # normalized for unsigned char
 
-	# * ??????????
+	# * ?????????? For instancing need to research
 	glVertexAttribDivisor(0, 0)
 	glVertexAttribDivisor(1, 1)
 	glVertexAttribDivisor(2, 1)
 
 	# Draw cubes
-	glDrawArraysInstanced(GL_TRIANGLES, 0, 3, n_cubes) # GL_TRIANGLE_STRIP
+	glDrawArraysInstanced(GL_TRIANGLES, 0, 9*12, n_cubes) # GL_TRIANGLE_STRIP
 
 	glDisableVertexAttribArray(shaders_template_location)
 	glDisableVertexAttribArray(shaders_position_location)
 	glDisableVertexAttribArray(shaders_color_location)
 
-def view():
-	global x_camera_pos, y_camera_pos
-	glTranslate(-x_camera_pos, -y_camera_pos, -z_camera_pos)
-	glRotate(yaw_camera_angle, 0, 1, 0)
-	glRotate(pitch_camera_angle, 1, 0, 0)
-
-def drawScene():
-	global width, height
-
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-	glMatrixMode(GL_PROJECTION)
-	glLoadIdentity()
-	glFrustum(-aspect_ratio, aspect_ratio, -1.0, 1.0, 1.0, 100.0)
-	glMatrixMode(GL_MODELVIEW)
-	glLoadIdentity()	
-
-	view()
-	#updateCubes()
-	updateVBOs()
 
 	# Flush the opengl rendering pipeline	
 	glutSwapBuffers()	
@@ -223,12 +246,14 @@ def keyPressed(key, x, y):
 	glutPostRedisplay()
 
 def cleanup():
-	global shaders_program, vertex_template_buffer, cubes_position_buffer, cubes_color_buffer
-	glDeleteBuffers(1, GLfloat(cubes_color_buffer))
-	glDeleteBuffers(1, GLfloat(cubes_position_buffer))
-	glDeleteBuffers(1, GLfloat(vertex_template_buffer))
-	glDeleteProgram(shaders_program)
-# *	glDeleteVertexArrays(1, &VertexArrayID)
+	global window
+	global template_buffer, position_buffer, color_buffer
+	global shaders_programID
+
+	glDeleteBuffers(1, GLfloat(template_buffer))
+	glDeleteBuffers(1, GLfloat(position_buffer))
+	glDeleteBuffers(1, GLfloat(color_buffer))
+	glDeleteProgram(shaders_programID)
 	glutDestroyWindow(window)
 	exit(0)
 
@@ -255,9 +280,12 @@ def main():
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT,
                GL_NICEST)	                # *Set Perspective Calculations to most accurate
 	glColor4f(1.0, 6.0, 6.0, 1.0)			# *FIGURE OUT WHAT THIS DOES
-	initShaders()
+
 	initCubes()
+	initShaders()
+	initCamera()
 	initVBOs()
+
 	glutMainLoop()                          # Start event processing engine
 
 main()

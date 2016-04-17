@@ -11,25 +11,21 @@ from OpenGL.GL import *
 VertexShader = """
 #version 130
 
-in vec3 vertex_template;
-in vec3 vertex_position;
-in vec3 vertex_color_in;
+in vec3 templateVS;
+in vec3 positionVS;
+in vec3 colorVS_in;
 
-out vec3 vertex_color_out;
+out vec3 colorVS_out;
+
+uniform mat4 frustum;
+uniform mat4 view;
 
 void main()
 {
-	// Output position of the vertex
-	// gl_Position.xyz = vertex_template * vertex_position;
-	// gl_Position.w = 1.0;
-	// gl_Position = vec4(vertex_in_cube_position, 1.0f);
+	vec3 vertex_position = templateVS.xyz + positionVS.xyz;
+	gl_Position = frustum * view * vec4(vertex_position, 1.0f);
 
-	vec3 shit = vertex_template.xyz + vertex_position.xyz;
-	gl_Position = vec4(shit, 1.0f);
-
-	// Output color
-	// vertex_out_cube_color = vertex_in_cube_color;
-	vertex_color_out = vertex_color_in;
+	colorVS_out = colorVS_in;
 }
 """
 
@@ -37,31 +33,23 @@ void main()
 FragmentShader = """
 #version 130
 
-// 4D vector containing RGBA components of pixel color
-//in vec4 vertex_out_cube_color;
+in vec3 colorVS_out;
 
-in vec3 vertex_color_out;
+out vec3 colorFS_out;
 
-// 4D vector containing RGBA components of pixel color
-//out vec4 fragment_out_cube_color;
-
-out vec3 color;
-
-void main(){
-	// Output color = color of the texture at the specified UV
-	// fragment_out_cube_color = vertex_out_cube_color;
-
-	color = vertex_color_out;
+void main()
+{
+	colorFS_out = colorVS_out;
 }
 """
 
 # Compile a vertex or fragment shader from source
 def compile_shader(name):
 	global VertexShader, FragmentShader
-	if name == "vertex":
+	if name == "VS":
 		source = VertexShader
 		shader_type = GL_VERTEX_SHADER
-	elif name == "fragment":
+	elif name == "FS":
 		source = FragmentShader
 		shader_type = GL_FRAGMENT_SHADER        
 	shader = glCreateShader(shader_type)
