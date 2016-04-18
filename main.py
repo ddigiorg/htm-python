@@ -22,9 +22,9 @@ window = 0
 width, height = 800, 600
 
 # Cube global variables
-n_cubes_x    = 2 # Typically 40 in HTM region 
-n_cubes_y    = 2 # Typically 10 in HTM region
-n_cubes_z    = 2 # Typically 40 in HTM region
+n_cubes_x    = 40 # Typically 40 in HTM region 
+n_cubes_y    = 10 # Typically 10 in HTM region
+n_cubes_z    = 40 # Typically 40 in HTM region
 n_cubes   = n_cubes_x * n_cubes_y * n_cubes_z
 cubes_region = np.array([[[[None]*2]*n_cubes_z]*n_cubes_y]*n_cubes_x)
 CUBE_SPACING = 4
@@ -145,9 +145,13 @@ def updateCubes():
 	global cubes_region, color_data
 	global flag
 
-	if flag > 0:
+	if flag == 0:
 		cubes_region[0][0][0][1] = [0.0, 0.0, 1.0]
 		cubes_region[1][1][1][1] = [0.0, 1.0, 0.0]
+		flag = 1
+	else:
+		cubes_region[0][0][0][1] = [0.5, 0.5, 0.5]
+		cubes_region[1][1][1][1] = [0.5, 0.5, 0.5]
 		flag = 0
 
 	color_list = [0] * n_cubes * COLOR_SIZE
@@ -162,6 +166,11 @@ def updateCubes():
 				i += 1
 	
 	color_data = np.array(color_list, dtype=np.float32)
+	# Opengl VBO cube color buffer bound, "orphaned", and filled with data
+	glBindBuffer(GL_ARRAY_BUFFER, color_buffer)
+	glBufferData(GL_ARRAY_BUFFER, color_data, GL_STREAM_DRAW)
+	#glBufferSubData(GL_ARRAY_BUFFER, 0, n_cubes * sys.getsizeof(GLfloat) * 4, color_data)  <-- try to get working!
+
 
 def updateCamera():
 	global view_matrix
@@ -213,7 +222,9 @@ def drawScene():
 	glVertexAttribDivisor(2, 1)
 
 	# Draw cubes
+	glCullFace(GL_BACK)
 	glDrawArraysInstanced(GL_TRIANGLES, 0, 9*12, n_cubes) # GL_TRIANGLE_STRIP
+	
 
 	glDisableVertexAttribArray(shaders_template_location)
 	glDisableVertexAttribArray(shaders_position_location)
@@ -283,6 +294,7 @@ def main():
 	glClearDepth(1.0)						# Depth Buffer setup
 	glDepthFunc(GL_LESS)					# The type of Depth Testing
 	glEnable(GL_DEPTH_TEST)					# Enable Depth Testing
+	glEnable(GL_CULL_FACE)					# Enable Culling
 #	glDepthFunc(GL_LESS)					# Accept fragment if closer to the camera than the former one
 	glShadeModel(GL_SMOOTH)					# Select Smooth Shading
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT,
