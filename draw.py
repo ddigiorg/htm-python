@@ -89,44 +89,42 @@ def initCubes(nx, ny, nz):
 	global n_cubes_x, n_cubes_y, n_cubes_z, n_cubes, cubes_world_positions, cubes_world_colors
 	global template_data, position_data, color_data
 
-	n_cubes_x    = nx 
-	n_cubes_y    = ny
-	n_cubes_z    = nz
+	n_cubes_x = nx
+	n_cubes_y = ny 
+	n_cubes_z = nz
 	n_cubes   = n_cubes_x * n_cubes_y * n_cubes_z
 	cubes_world_positions = np.array([[[None]*n_cubes_z]*n_cubes_y]*n_cubes_x)
 	cubes_world_colors    = np.array([[[None]*n_cubes_z]*n_cubes_y]*n_cubes_x)
 
 	template_list = [
-		 1.0,  1.0,  1.0,  1.0,  1.0, -1.0, -1.0,  1.0, -1.0,
-		 1.0,  1.0,  1.0, -1.0,  1.0, -1.0, -1.0,  1.0,  1.0,
-		-1.0,  1.0,  1.0, -1.0, -1.0,  1.0,  1.0, -1.0,  1.0,
-		 1.0,  1.0,  1.0, -1.0,  1.0,  1.0,  1.0, -1.0,  1.0,
-		-1.0, -1.0, -1.0, -1.0, -1.0,  1.0, -1.0,  1.0,  1.0,
-		-1.0, -1.0, -1.0, -1.0,  1.0,  1.0, -1.0,  1.0, -1.0,
-		 1.0,  1.0, -1.0, -1.0, -1.0, -1.0, -1.0,  1.0, -1.0,
-		 1.0,  1.0, -1.0,  1.0, -1.0, -1.0, -1.0, -1.0, -1.0,
-		 1.0,  1.0,  1.0,  1.0, -1.0, -1.0,  1.0,  1.0, -1.0,
-		 1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0, -1.0,  1.0,
-		 1.0, -1.0,  1.0, -1.0, -1.0, -1.0,  1.0, -1.0, -1.0,
-		 1.0, -1.0,  1.0, -1.0, -1.0,  1.0, -1.0, -1.0, -1.0]
+		 1,  1,  1,  1,  1, -1, -1,  1, -1,
+		 1,  1,  1, -1,  1, -1, -1,  1,  1,
+		-1,  1,  1, -1, -1,  1,  1, -1,  1,
+		 1,  1,  1, -1,  1,  1,  1, -1,  1,
+		-1, -1, -1, -1, -1,  1, -1,  1,  1,
+		-1, -1, -1, -1,  1,  1, -1,  1, -1,
+		 1,  1, -1, -1, -1, -1, -1,  1, -1,
+		 1,  1, -1,  1, -1, -1, -1, -1, -1,
+		 1,  1,  1,  1, -1, -1,  1,  1, -1,
+		 1, -1, -1,  1,  1,  1,  1, -1,  1,
+		 1, -1,  1, -1, -1, -1,  1, -1, -1,
+		 1, -1,  1, -1, -1,  1, -1, -1, -1]
 	
 	position_list = [0] * n_cubes * POSITION_SIZE
 	
 	i = 0
-	for x in range(n_cubes_x):
+	for z in range(n_cubes_z):
 		for y in range(n_cubes_y):
-			for z in range(n_cubes_z):	
-				cubes_world_positions[x][y][z] = [0.0 + x * CUBE_SPACING, 0.0 + y * CUBE_SPACING, 0.0 + z * CUBE_SPACING]
+			for x in range(n_cubes_x):	
+				cubes_world_positions[x][y][z] = [0 + x * CUBE_SPACING, 0 + y * CUBE_SPACING, 0 + z * CUBE_SPACING]
 				position_list[i*POSITION_SIZE  ] = cubes_world_positions[x][y][z][0] # cube x world position
 				position_list[i*POSITION_SIZE+1] = cubes_world_positions[x][y][z][1] # cube y world position
 				position_list[i*POSITION_SIZE+2] = cubes_world_positions[x][y][z][2] # cube z world position
 				cubes_world_colors[x][y][z] = [0.5, 0.5, 0.5]
 				i += 1
 
-	template_data = np.array(template_list, dtype=np.float32)
-	position_data = np.array(position_list, dtype=np.float32)
-	
-	return cubes_world_colors
+	template_data = np.array(template_list, dtype=np.int16)
+	position_data = np.array(position_list, dtype=np.int16)
 
 def initShaders():
 	global shaders_programID, shaders_frustumID, shaders_viewID, shaders_template_location, shaders_position_location, shaders_color_location
@@ -144,10 +142,10 @@ def initShaders():
 def initCamera():
 	global width, height
 	global frustum_matrix
-	view_angle = 45.0
+	view_angle = 60.0
 	aspect_ratio = width/height
 	z_near = 1.0
-	z_far  = 100.0
+	z_far  = 10.0
 	
 	frustum_matrix = [1.0/np.tan(view_angle), 0.0,                             0.0,                              0.0,
 					  0.0,                    aspect_ratio/np.tan(view_angle), 0.0,                              0.0,
@@ -172,21 +170,21 @@ def initVBOs():
 	glBindBuffer(GL_ARRAY_BUFFER, color_buffer)
 	glBufferData(GL_ARRAY_BUFFER, None, GL_STREAM_DRAW)
 
-def updateCubes(temp_colors):
+def updateCubes(array_3d):
 	global color_data
 
 	color_list = [0] * n_cubes * COLOR_SIZE
 
 	i = 0
-	for x in range(n_cubes_x):
+	for z in range(n_cubes_z):
 		for y in range(n_cubes_y):
-			for z in range(n_cubes_z):	
-				color_list[i*COLOR_SIZE  ] = temp_colors[x][y][z][0] # cube r color
-				color_list[i*COLOR_SIZE+1] = temp_colors[x][y][z][1] # cube g color
-				color_list[i*COLOR_SIZE+2] = temp_colors[x][y][z][2] # cube b color
+			for x in range(n_cubes_x):	
+				color_list[i*COLOR_SIZE  ] = array_3d[x][y][z][0] # cube r color
+				color_list[i*COLOR_SIZE+1] = array_3d[x][y][z][1] # cube g color
+				color_list[i*COLOR_SIZE+2] = array_3d[x][y][z][2] # cube b color
 				i += 1
 	
-	color_data = np.array(color_list, dtype=np.float32)
+	color_data = np.array(color_list, dtype=np.float16)
 
 def updateCamera():
 	global view_matrix
@@ -217,17 +215,17 @@ def updateScene():
 	# Shader attribute buffer: vertices template
 	glEnableVertexAttribArray(shaders_template_location)
 	glBindBuffer(GL_ARRAY_BUFFER, template_buffer)
-	glVertexAttribPointer(shaders_template_location, VERTEX_SIZE, GL_FLOAT, False, 0, None)
+	glVertexAttribPointer(shaders_template_location, VERTEX_SIZE, GL_SHORT, False, 0, None)
 
 	# Shader attribute buffer: cube positions
 	glEnableVertexAttribArray(shaders_position_location)
 	glBindBuffer(GL_ARRAY_BUFFER, position_buffer)
-	glVertexAttribPointer(shaders_position_location, POSITION_SIZE, GL_FLOAT, False, 0, None)
+	glVertexAttribPointer(shaders_position_location, POSITION_SIZE, GL_SHORT, False, 0, None)
 
 	# Shader attribute buffer: cube colors
 	glEnableVertexAttribArray(shaders_color_location)
 	glBindBuffer(GL_ARRAY_BUFFER, color_buffer)
-	glVertexAttribPointer(shaders_color_location, COLOR_SIZE, GL_FLOAT, True, 0, None) # normalized for unsigned char
+	glVertexAttribPointer(shaders_color_location, COLOR_SIZE, GL_HALF_FLOAT, True, 0, None) # normalized for unsigned char
 
 	# * ?????????? For instancing... figure out what this does
 	glVertexAttribDivisor(0, 0)
