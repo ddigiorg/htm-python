@@ -96,6 +96,15 @@ def initCubes(nx, ny, nz):
 	cubes_world_positions = np.array([[[None]*n_cubes_z]*n_cubes_y]*n_cubes_x)
 	cubes_world_colors    = np.array([[[None]*n_cubes_z]*n_cubes_y]*n_cubes_x)
 
+	'''
+	template_list = [
+		0.5, 0.0, 0.0, 0.0, 1.0, 0.0, -0.5, 0.0, 0.0]
+#		 1,  1,  1, -1, -1,  1, -1,  1, -1,
+#		-1, -1,  1, -1,  1, -1,  1, -1, -1,
+#		-1,  1, -1,  1, -1, -1,  1,  1,  1, 
+#		 1, -1, -1,  1,  1,  1, -1, -1,  1]
+
+	'''
 	template_list = [
 		 1,  1,  1,  1,  1, -1, -1,  1, -1,
 		 1,  1,  1, -1,  1, -1, -1,  1,  1,
@@ -110,6 +119,7 @@ def initCubes(nx, ny, nz):
 		 1, -1,  1, -1, -1, -1,  1, -1, -1,
 		 1, -1,  1, -1, -1,  1, -1, -1, -1]
 	
+
 	position_list = [0] * n_cubes * POSITION_SIZE
 	
 	i = 0
@@ -123,7 +133,7 @@ def initCubes(nx, ny, nz):
 				cubes_world_colors[x][y][z] = [0.5, 0.5, 0.5]
 				i += 1
 
-	template_data = np.array(template_list, dtype=np.int16)
+	template_data = np.array(template_list, dtype=np.float16)
 	position_data = np.array(position_list, dtype=np.int16)
 
 def initShaders():
@@ -215,7 +225,7 @@ def updateScene():
 	# Shader attribute buffer: vertices template
 	glEnableVertexAttribArray(shaders_template_location)
 	glBindBuffer(GL_ARRAY_BUFFER, template_buffer)
-	glVertexAttribPointer(shaders_template_location, VERTEX_SIZE, GL_SHORT, False, 0, None)
+	glVertexAttribPointer(shaders_template_location, VERTEX_SIZE, GL_HALF_FLOAT, False, 0, None)
 
 	# Shader attribute buffer: cube positions
 	glEnableVertexAttribArray(shaders_position_location)
