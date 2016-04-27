@@ -2,15 +2,15 @@ class Cortex(object):
 	def __init__(self, regions):
 		self.regions = regions
 
-	def getRegion(self, index):
-		return self.regions[index]
+	def getRegions(self):
+		return self.regions
 
 class Region(object):
 	def __init__(self, columns):
 		self.columns = columns
 
-	def getColumn(self, index):
-		return self.columns[index]
+	def getColumns(self):
+		return self.columns
 
 class Column(object):
 	def __init__(self, neurons, proximal_dendrite):
@@ -20,8 +20,8 @@ class Column(object):
 	def getProximalDendrite(self):
 		return self.proximal_dendrite
 
-	def getNeuron(self, index):
-		return self.neurons[index]
+	def getNeurons(self):
+		return self.neurons
 
 class Neuron(object):
 	def __init__(self, apical_dendrites, basal_dendrites):
@@ -32,11 +32,11 @@ class Neuron(object):
 	def setAxonOutput(self, value):
 		self.axon_output = value
 
-	def getApicalDendrite(self, index):
-		return self.apical_dendrites[index]
+	def getApicalDendrites(self):
+		return self.apical_dendrites
 
-	def getBasalDendrite(self, index):
-		return self.basal_dendrites[index]
+	def getBasalDendrites(self):
+		return self.basal_dendrites
 
 	def getAxonOutput(self):
 		return self.axon_output
@@ -45,27 +45,27 @@ class Dendrite(object):
 	def __init__(self, synapses):
 		self.synapses = synapses 
 
-	def getSynapse(self, index):
-		return self.synapses[index]
+	def getSynapses(self):
+		return self.synapses
 
 class Synapse(object):
 	def __init__(self):
+		self.connection_address = 0
 		self.permanance = 0.0
-		self.connected = 0
 
 	def setPermanance(self, value):
 		self.permanance = value
 
-	def setConnected(self, value):
+	def setConnectionAddress(self, value):
 		self.connected = value
 
 	def getPermanance(self):
 		return self.permanance
 
-	def getConnected(self):
+	def getConnectionAddress(self):
 		return self.connected
 
-def InitCortex(n_regions, n_columns, n_neurons, n_dendrites, n_synapses):
+def initCortex(n_regions, n_columns, n_neurons, n_dendrites, n_synapses):
 	regions = [None]*n_regions
 	for r in range(n_regions):
 		columns = [None]*n_columns
@@ -88,8 +88,16 @@ def InitCortex(n_regions, n_columns, n_neurons, n_dendrites, n_synapses):
 	cortex = Cortex(regions)
 	return cortex
 
-cortex = InitCortex(1, 1, 1, 1, 1)
+def initSynapticConnections(inputs, cortex):
 
-cortex.getRegion(0).getColumn(0).getNeuron(0).getBasalDendrite(0).getSynapse(0).setPermanance(1.0)
-print(cortex.getRegion(0).getColumn(0).getNeuron(0).getBasalDendrite(0).getSynapse(0).getPermanance())
-print(cortex.getRegion(0).getColumn(0).getNeuron(0).getAxonOutput())
+	n_columns = len(cortex.getRegions()[0].getColumns())
+	n_neurons = len(cortex.getRegions()[0].getColumns()[0].getNeurons())
+
+	print(n_columns)
+	print(n_neurons)
+
+	return cortex
+
+def runSpatialPooler(inputs, region):
+	
+	return region

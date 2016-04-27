@@ -9,60 +9,75 @@ from OpenGL.GLU import *
 import numpy as np
 import random as rand
 import draw as draw
+import cortex as cortex
 
-colors_dict = {'inactive': [0.5, 0.5, 0.5],
-			   'active'  : [0.0, 1.0, 0.0],
-			   'predict' : [1.0, 0.0, 1.0]}
+colors_dict = {0: [0.5, 0.5, 0.5], # Neuron inactive state
+			   1: [0.0, 1.0, 0.0], # Neuron active (feed forward)
+			   2: [1.0, 0.0, 1.0]} # Neuron predictive state
+
+# Cortex Global Variables
+neocortex   = None
+n_regions   = 1 # Number of regions per cortex
+n_columns   = 3 # Number of columns per region
+n_neurons   = 5 # Number of neurons per column
+n_dendrites = 1 # Number of dendrites per neuron
+n_synapses  = 1 # Number of synapses per dendrite
 
 # Input Setup
-n_inputs_x = 5
-n_inputs_z = 5
-n_inputs = n_inputs_x * n_inputs_z
-inputs = np.array([0]*n_inputs, dtype=np.int8)
+n_inputs = 10
+inputs = [0]*n_inputs
+inputs[1] = 1
+inputs[2] = 1
+inputs[3] = 1
 
-# HTM Region Setup
-n_neurons_x = 20
-n_neurons_y = 5
-n_neurons_z = 20
-region_colors = np.array([[[ colors_dict['inactive'] ]*n_neurons_z]*n_neurons_y]*n_neurons_x, dtype=np.float16)
+# OpenGL Global Variables
+n_x = n_columns # x axis for opengl
+n_y = n_neurons # y axis for opengl
+n_z = 1         # z axis for opengl
+
+region_colors = np.array([[[ colors_dict[0] ]*n_z]*n_y]*n_x, dtype=np.float16)
 
 flag = 0
 
-columns_potential_pool = np.array([[0]*n_neurons_z]*n_neurons_x)
-
-#for x in range(n_neurons_x):
-#	for z in range(n_neurons_z):
-#print(list(range(n_inputs)))
-#for i in rand.sample(range(n_inputs), int(n_inputs*0.5)):
-#	print(i)
-		#columns_potential_pool[x][z] = rand.sample
-
-def mainGL():
-	global n_neurons_x, n_neurons_y, n_neurons_z, region_colors
+def loop():
+	global inputs, neocortex, n_regions, n_columns, n_neurons, n_dendrites, n_synapses
+	global n_x, n_y, n_z, region_colors
 	global colors_dict
 	global flag
 
+	temp = [[0, 0], [1, 1]]
+
 	if flag == 0:
-		for y in range(n_neurons_y):
-			region_colors[0][y][0] = colors_dict['inactive']
-			region_colors[1][y][0] = colors_dict['inactive']
+		for t in temp:
+			neocortex.getRegions()[0].getColumns()[t[0]].getNeurons()[t[1]].setAxonOutput(0)
 		flag = 1
 	else:	
-		for y in range(n_neurons_y):
-			region_colors[0][y][0] = colors_dict['active']
-			region_colors[1][y][0] = colors_dict['predict']
+		for t in temp:
+			neocortex.getRegions()[0].getColumns()[t[0]].getNeurons()[t[1]].setAxonOutput(2)
 		flag = 0
 
+	for c in range(n_columns):
+		for n in range(n_neurons):
+			state = neocortex.getRegions()[0].getColumns()[c].getNeurons()[n].getAxonOutput()
+			region_colors[c][n][0] = colors_dict[state]
+	
 	draw.updateCubes(region_colors)
 	draw.updateCamera()
 	draw.updateScene()
 
 def main():
-	global neurons_matrix, n_neurons_x, n_neurons_y, n_neurons_z
+	global inputs, neocortex, n_regions, n_columns, n_neurons, n_dendrites, n_synapses
+	global n_x, n_y, n_z
+	
+	# Initialize cortex
+	neocortex = cortex.initCortex(n_regions, n_columns, n_neurons, n_dendrites, n_synapses)
+	neocortex = cortex.initSynapticConnections(inputs, neocortex)
+
+	# Initialize opengl drawing
 	draw.initGL()
-	glutDisplayFunc(mainGL) # Register the drawing function with glut
-	glutIdleFunc(mainGL)    # When doing nothing redraw scene
-	draw.initCubes(n_neurons_x, n_neurons_y, n_neurons_z)
+	glutDisplayFunc(loop) # Register the drawing function with glut
+	glutIdleFunc(loop)    # When doing nothing redraw scene
+	draw.initCubes(n_x, n_y, n_z)
 	draw.initShaders()
 	draw.initCamera()
 	draw.initVBOs()
