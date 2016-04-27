@@ -1,3 +1,5 @@
+import random as random
+
 class Cortex(object):
 	def __init__(self, regions):
 		self.regions = regions
@@ -92,9 +94,19 @@ def initSynapticConnections(inputs, cortex):
 
 	n_columns = len(cortex.getRegions()[0].getColumns())
 	n_neurons = len(cortex.getRegions()[0].getColumns()[0].getNeurons())
+	n_proximal_synapses = len(cortex.getRegions()[0].getColumns()[0].getProximalDendrite().getSynapses())
 
-	print(n_columns)
-	print(n_neurons)
+	for c in range(n_columns):
+
+		# Potential Pool: a random subset of inputs based on number of proximal dendrite synapses (usually 50% of input size)
+		inputs_addresses = list(range(len(inputs)))
+		random.shuffle(inputs_addresses)
+		potential_pool = inputs_addresses[0:n_proximal_synapses]
+
+		for s in range(n_proximal_synapses):
+			
+			# Link potential pool address to proximal dendrite synapse
+			cortex.getRegions()[0].getColumns()[c].getProximalDendrite().getSynapses()[s].setConnectionAddress(potential_pool[s])
 
 	return cortex
 

@@ -21,7 +21,7 @@ n_regions   = 1 # Number of regions per cortex
 n_columns   = 3 # Number of columns per region
 n_neurons   = 5 # Number of neurons per column
 n_dendrites = 1 # Number of dendrites per neuron
-n_synapses  = 1 # Number of synapses per dendrite
+n_synapses  = 5 # Number of synapses per dendrite
 
 # Input Setup
 n_inputs = 10
@@ -60,7 +60,7 @@ def loop():
 		for n in range(n_neurons):
 			state = neocortex.getRegions()[0].getColumns()[c].getNeurons()[n].getAxonOutput()
 			region_colors[c][n][0] = colors_dict[state]
-	
+		
 	draw.updateCubes(region_colors)
 	draw.updateCamera()
 	draw.updateScene()
@@ -72,6 +72,11 @@ def main():
 	# Initialize cortex
 	neocortex = cortex.initCortex(n_regions, n_columns, n_neurons, n_dendrites, n_synapses)
 	neocortex = cortex.initSynapticConnections(inputs, neocortex)
+
+	for c in range(n_columns):
+		print("column {}".format(c))
+		for s in range(n_synapses):
+			print(neocortex.getRegions()[0].getColumns()[c].getProximalDendrite().getSynapses()[s].getConnectionAddress())
 
 	# Initialize opengl drawing
 	draw.initGL()
