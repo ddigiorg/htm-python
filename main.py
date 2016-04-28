@@ -24,11 +24,13 @@ n_dendrites = 1 # Number of dendrites per neuron
 n_synapses  = 5 # Number of synapses per dendrite
 
 # Input Setup
-n_inputs = 10
+n_inputs = 20
 inputs = [0]*n_inputs
+inputs[0] = 1
 inputs[1] = 1
 inputs[2] = 1
 inputs[3] = 1
+inputs[4] = 1
 
 # OpenGL Global Variables
 n_x = n_columns # x axis for opengl
@@ -45,8 +47,11 @@ def loop():
 	global colors_dict
 	global flag
 
-	temp = [[0, 0], [1, 1]]
+#	cortex.runSpatialPooler(inputs, neocortex)
 
+	temp = [[0, 0], [1, 1]]
+	
+	'''
 	if flag == 0:
 		for t in temp:
 			neocortex.getRegions()[0].getColumns()[t[0]].getNeurons()[t[1]].setAxonOutput(0)
@@ -55,6 +60,7 @@ def loop():
 		for t in temp:
 			neocortex.getRegions()[0].getColumns()[t[0]].getNeurons()[t[1]].setAxonOutput(2)
 		flag = 0
+	'''
 
 	for c in range(n_columns):
 		for n in range(n_neurons):
@@ -73,10 +79,17 @@ def main():
 	neocortex = cortex.initCortex(n_regions, n_columns, n_neurons, n_dendrites, n_synapses)
 	neocortex = cortex.initSynapticConnections(inputs, neocortex)
 
+	print("inputs {}".format(inputs))
+
 	for c in range(n_columns):
-		print("column {}".format(c))
+		connections = []
 		for s in range(n_synapses):
-			print(neocortex.getRegions()[0].getColumns()[c].getProximalDendrite().getSynapses()[s].getConnectionAddress())
+			connections.append(neocortex.getRegions()[0].getColumns()[c].getProximalDendrite().getSynapses()[s].getConnectionAddress())
+		print("column {}: {}".format(c, connections))
+
+	for temp in range(5):
+		print("ITERATION {}".format(temp))
+		neocortex = cortex.runSpatialPooler(inputs, neocortex)
 
 	# Initialize opengl drawing
 	draw.initGL()
