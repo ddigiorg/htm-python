@@ -87,7 +87,27 @@ def initDendrites(n_dendrites, n_synapses):
 		for s in range(n_synapses):
 			synapses[s] = Synapse()
 		dendrites[d] = Dendrite(synapses)
+
 	return dendrites
+
+def initNeurons(n_neurons):
+	neurons = [None]*n_neurons
+	for n in range(n_neurons):
+		dendrites_apical = initDendrites(n_dendrites_apical, n_synapses_apical)
+		dendrites_basal  = initDendrites(n_dendrites_basal , n_synapses_basal )
+		neurons[n] = Neuron(dendrites_apical, dendrites_basal)
+
+	return neurons
+
+def initColumns(n_columns, n_dendrites_proximal):
+	columns = [None]*n_columns
+	dendrites_proximal = [None]*n_dendrites_proximal
+	for c in range(n_columns):
+		neurons = initNeurons(n_neurons) 
+		dendrites_proximal = initDendrites(n_dendrites_proximal, n_synapses_proximal)
+		columns[c] = Column(neurons, dendrites_proximal)
+		
+	return columns
 
 def initRegion(inputs, c, n, d, s):
 	global n_columns, n_neurons
@@ -103,19 +123,7 @@ def initRegion(inputs, c, n, d, s):
 	n_synapses_apical = s
 	n_synapses_basal  = s
 
-	columns = [None]*n_columns
-	dendrites_proximal = [None]*n_dendrites_proximal
-	for c in range(n_columns):
-		neurons = [None]*n_neurons
-
-		for n in range(n_neurons):
-			dendrites_apical = initDendrites(n_dendrites_apical, n_synapses_apical)
-			dendrites_basal  = initDendrites(n_dendrites_basal , n_synapses_basal )
-			neurons[n] = Neuron(dendrites_apical, dendrites_basal)
-
-		dendrites_proximal = initDendrites(n_dendrites_proximal, n_synapses_proximal)
-		columns[c] = Column(neurons, dendrites_proximal)
-		columns[c].getProximalDendrites()[0].getSynapses()[0]
+	columns = initColumns(n_columns, n_dendrites_proximal)
 
 	region = Region(columns)	
 
@@ -205,4 +213,7 @@ def runSpatialPooler(inputs, region):
 			c = active_columns_addresses[ac]
 			region.getColumns()[c].getNeurons()[n].setAxonOutput(1)
 
+	return region
+
+def runTemporalPooler(region):
 	return region
