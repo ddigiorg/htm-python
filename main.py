@@ -16,21 +16,30 @@ colors_dict = {0: [0.5, 0.5, 0.5], # Neuron inactive state
 			   2: [1.0, 0.0, 1.0]} # Neuron predictive state
 
 # Cortex Global Variables
-neocortex   = None
 n_regions   = 1 # Number of regions per cortex
-n_columns   = 3 # Number of columns per region
+n_columns   = 10 # Number of columns per region
 n_neurons   = 5 # Number of neurons per column
 n_dendrites = 1 # Number of dendrites per neuron
 n_synapses  = 5 # Number of synapses per dendrite
+region   = None
 
 # Input Setup
 n_inputs = 20
-inputs = [0]*n_inputs
-inputs[0] = 1
-inputs[1] = 1
-inputs[2] = 1
-inputs[3] = 1
-inputs[4] = 1
+inputs0 = [0]*n_inputs
+inputs0[0] = 1
+inputs0[1] = 1
+inputs0[2] = 1
+inputs0[3] = 1
+inputs0[4] = 1
+
+inputs1 = [0]*n_inputs
+inputs1[1] = 1 
+inputs1[2] = 1
+inputs1[3] = 1
+inputs1[4] = 1
+inputs1[5] = 1
+
+inputs = inputs0
 
 # OpenGL Global Variables
 n_x = n_columns # x axis for opengl
@@ -42,29 +51,23 @@ region_colors = np.array([[[ colors_dict[0] ]*n_z]*n_y]*n_x, dtype=np.float16)
 flag = 0
 
 def loop():
-	global inputs, neocortex, n_regions, n_columns, n_neurons, n_dendrites, n_synapses
+	global inputs, inputs0, inputs1, region, n_regions, n_columns, n_neurons, n_dendrites, n_synapses
 	global n_x, n_y, n_z, region_colors
 	global colors_dict
 	global flag
 
-#	cortex.runSpatialPooler(inputs, neocortex)
-
-	temp = [[0, 0], [1, 1]]
-	
-	'''
 	if flag == 0:
-		for t in temp:
-			neocortex.getRegions()[0].getColumns()[t[0]].getNeurons()[t[1]].setAxonOutput(0)
+		inputs = inputs0
 		flag = 1
-	else:	
-		for t in temp:
-			neocortex.getRegions()[0].getColumns()[t[0]].getNeurons()[t[1]].setAxonOutput(2)
+	elif flag == 1:
+		inputs = inputs1
 		flag = 0
-	'''
+
+	cortex.runSpatialPooler(inputs, region)
 
 	for c in range(n_columns):
 		for n in range(n_neurons):
-			state = neocortex.getRegions()[0].getColumns()[c].getNeurons()[n].getAxonOutput()
+			state = region.getColumns()[c].getNeurons()[n].getAxonOutput()
 			region_colors[c][n][0] = colors_dict[state]
 		
 	draw.updateCubes(region_colors)
@@ -72,24 +75,20 @@ def loop():
 	draw.updateScene()
 
 def main():
-	global inputs, neocortex, n_regions, n_columns, n_neurons, n_dendrites, n_synapses
+	global inputs, region, n_regions, n_columns, n_neurons, n_dendrites, n_synapses
 	global n_x, n_y, n_z
 	
 	# Initialize cortex
-	neocortex = cortex.initCortex(n_regions, n_columns, n_neurons, n_dendrites, n_synapses)
-	neocortex = cortex.initSynapticConnections(inputs, neocortex)
+	region = cortex.initRegion(inputs0, n_columns, n_neurons, n_dendrites, n_synapses)
+	region = cortex.initConnections(inputs0, region)
 
-	print("inputs {}".format(inputs))
 
-	for c in range(n_columns):
-		connections = []
-		for s in range(n_synapses):
-			connections.append(neocortex.getRegions()[0].getColumns()[c].getProximalDendrite().getSynapses()[s].getConnectionAddress())
-		print("column {}: {}".format(c, connections))
-
-	for temp in range(5):
-		print("ITERATION {}".format(temp))
-		neocortex = cortex.runSpatialPooler(inputs, neocortex)
+	'''	
+	print("inputs: {}".format(inputs))
+	for i in range(5):
+		print("ITERATION: {}".format(i))
+		cortex.runSpatialPooler(inputs, neocortex)
+	'''
 
 	# Initialize opengl drawing
 	draw.initGL()

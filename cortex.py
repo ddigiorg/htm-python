@@ -1,6 +1,16 @@
 import random as random
 import math as math
 
+n_regions = None 
+n_columns = None
+n_neurons = None
+n_dendrites_proximal = None
+n_dendrites_apical = None
+n_dendrites_basal = None
+n_synapses_proximal = None
+n_synapses_apical = None
+n_synapses_basal = None
+
 class Cortex(object):
 	def __init__(self, regions):
 		self.regions = regions
@@ -16,30 +26,30 @@ class Region(object):
 		return self.columns
 
 class Column(object):
-	def __init__(self, neurons, proximal_dendrite):
-		self.proximal_dendrite = proximal_dendrite
+	def __init__(self, neurons, dendrites_proximal):
+		self.dendrites_proximal = dendrites_proximal
 		self.neurons = neurons
 
-	def getProximalDendrite(self):
-		return self.proximal_dendrite
+	def getProximalDendrites(self):
+		return self.dendrites_proximal
 
 	def getNeurons(self):
 		return self.neurons
 
 class Neuron(object):
-	def __init__(self, apical_dendrites, basal_dendrites):
-		self.apical_dendrites = apical_dendrites
-		self.basal_dendrites = basal_dendrites
+	def __init__(self, dendrites_apical, dendrites_basal):
+		self.dendrites_apical = dendrites_apical
+		self.dendrites_basal  = dendrites_basal
 		self.axon_output = 0
 
 	def setAxonOutput(self, value):
 		self.axon_output = value
 
 	def getApicalDendrites(self):
-		return self.apical_dendrites
+		return self.dendrites_apical
 
 	def getBasalDendrites(self):
-		return self.basal_dendrites
+		return self.dendrites_basal
 
 	def getAxonOutput(self):
 		return self.axon_output
@@ -54,12 +64,12 @@ class Dendrite(object):
 class Synapse(object):
 	def __init__(self):
 		self.connection_address = 0
-		self.permanance = 0.0
+		self.permanance = 0
 
 	def updatePermanance(self, value):
 		self.permanance += value
-		if self.permanance > 1.0: self.permanance = 1.0
-		if self.permanance < 0.0: self.permanance = 0.0
+		if self.permanance > 100: self.permanance = 100
+		if self.permanance <   0: self.permanance = 0
 
 	def setConnectionAddress(self, value):
 		self.connected = value
@@ -70,105 +80,129 @@ class Synapse(object):
 	def getConnectionAddress(self):
 		return self.connected
 
-def initCortex(n_regions, n_columns, n_neurons, n_dendrites, n_synapses):
-	regions = [None]*n_regions
-	for r in range(n_regions):
-		columns = [None]*n_columns
-		proximal_dendrite = [None]
-		for c in range(n_columns):
-			neurons = [None]*n_neurons
-			for n in range(n_neurons):
-				apical_dendrites = [None]*n_dendrites
-				basal_dendrites = [None]*n_dendrites
-				for d in range(n_dendrites):
-					synapses = [None]*n_synapses
-					for s in range(n_synapses):
-						synapses[s] = Synapse()
-					apical_dendrites[d] = Dendrite(synapses)
-					basal_dendrites[d] = Dendrite(synapses)
-				neurons[n] = Neuron(apical_dendrites, basal_dendrites)
-			proximal_dendrite = Dendrite(synapses)
-			columns[c] = Column(neurons, proximal_dendrite)
-		regions[r] = Region(columns)
+def initDendrites(n_dendrites, n_synapses):
+	dendrites = [None]*n_dendrites
+	for d in range(n_dendrites):
+		synapses = [None]*n_synapses
+		for s in range(n_synapses):
+			synapses[s] = Synapse()
+		dendrites[d] = Dendrite(synapses)
+	return dendrites
+
+def initRegion(inputs, c, n, d, s):
+	global n_columns, n_neurons
+	global n_dendrites_proximal, n_dendrites_apical, n_dendrites_basal
+	global n_synapses_proximal,  n_synapses_apical,  n_synapses_basal
+
+	n_columns = c
+	n_neurons = n
+	n_dendrites_proximal = 1
+	n_dendrites_apical = d
+	n_dendrites_basal  = d
+	n_synapses_proximal = int(len(inputs)/2)
+	n_synapses_apical = s
+	n_synapses_basal  = s
+
+	columns = [None]*n_columns
+	dendrites_proximal = [None]*n_dendrites_proximal
+	for c in range(n_columns):
+		neurons = [None]*n_neurons
+
+		for n in range(n_neurons):
+			dendrites_apical = initDendrites(n_dendrites_apical, n_synapses_apical)
+			dendrites_basal  = initDendrites(n_dendrites_basal , n_synapses_basal )
+			neurons[n] = Neuron(dendrites_apical, dendrites_basal)
+
+		dendrites_proximal = initDendrites(n_dendrites_proximal, n_synapses_proximal)
+		columns[c] = Column(neurons, dendrites_proximal)
+		columns[c].getProximalDendrites()[0].getSynapses()[0]
+
+	region = Region(columns)	
+
+	return region
+
+def initCortex(regions):
+	global n_regions
+	n_regions = r
+
 	cortex = Cortex(regions)
 	return cortex
 
-def initSynapticConnections(inputs, cortex):
+def initConnections(inputs, region):
+	global n_columns, n_synapses_proximal
 
-	n_columns = len(cortex.getRegions()[0].getColumns())
-	n_neurons = len(cortex.getRegions()[0].getColumns()[0].getNeurons())
-	n_proximal_synapses = len(cortex.getRegions()[0].getColumns()[0].getProximalDendrite().getSynapses())
-
-	synapse_threshold = 0.2	
+	synapse_threshold = 20
 
 	for c in range(n_columns):
 
 		# Potential Pool: a random subset of inputs based on number of proximal dendrite synapses (usually 50% of input size)
 		inputs_addresses = list(range(len(inputs)))
 		random.shuffle(inputs_addresses)
-		potential_pool = inputs_addresses[0:n_proximal_synapses]
+		potential_pool = inputs_addresses[0:n_synapses_proximal]
 
-		for s in range(n_proximal_synapses):
-			synapse = cortex.getRegions()[0].getColumns()[c].getProximalDendrite().getSynapses()[s]
+		for s in range(n_synapses_proximal):
+			synapse = region.getColumns()[c].getProximalDendrites()[0].getSynapses()[s]
 			# Link potential pool address to proximal dendrite synapse
 			synapse.setConnectionAddress(potential_pool[s])
 
 			# Randomize synapse permanance around threshold
-			synapse.updatePermanance(synapse_threshold + 0.1*random.randint(-1, 1))
+			synapse.updatePermanance(synapse_threshold + random.randint(0, 1))
 
-	return cortex
+	return region
 
-def runSpatialPooler(inputs, cortex):
+def runSpatialPooler(inputs, region):
+	global n_columns, n_neurons, n_dendrites_proximal, n_synapses_proximal
 
-	n_columns = len(cortex.getRegions()[0].getColumns())
-	n_neurons = len(cortex.getRegions()[0].getColumns()[0].getNeurons())
-	n_proximal_synapses = len(cortex.getRegions()[0].getColumns()[0].getProximalDendrite().getSynapses())
+	synapse_threshold = 20
+	active_percentage = 0.02
+	learning_rate = 1
 
-	# For each column compute the overlap score
+	# Overlap Score: for each column compute the overlap score  
 	overlap_score = [0]*n_columns
-	synapse_threshold = 0.2
-
 	for c in range(n_columns):
-		overlap_score[c] = 0 
-		for s in range(n_proximal_synapses):
-			synapse_address = cortex.getRegions()[0].getColumns()[c].getProximalDendrite().getSynapses()[s].getConnectionAddress()
-			synapse_permanance = cortex.getRegions()[0].getColumns()[c].getProximalDendrite().getSynapses()[s].getPermanance()
+		proximal_dendrite = region.getColumns()[c].getProximalDendrites()[0]
+		for s in range(n_synapses_proximal):
+			synapse = proximal_dendrite.getSynapses()[s]
+			synapse_address = synapse.getConnectionAddress()
+			synapse_permanance = synapse.getPermanance()
 			if synapse_permanance > synapse_threshold:
 				overlap_score[c] = overlap_score[c] + inputs[synapse_address]
+#	print("overlap score {}".format(overlap_score))
 
-	print("overlap score {}".format(overlap_score))
-
-	# Enforce sparcity by selecting a subset of active columns from the top overlap scores (usually top 2%)
-	n_active_columns = math.ceil(len(overlap_score)*0.02)
+	# Active Columns: enforce sparcity by selecting a subset of active columns from the top overlap scores (usually top 2%)
+	n_active_columns = math.ceil(n_columns*active_percentage)
 	active_columns_addresses = [0]*n_active_columns
-
 	for ac in range(n_active_columns):
-		highest_score_address = overlap_score.index(max(overlap_score))
-		active_columns_addresses[ac] = highest_score_address
-		del overlap_score[highest_score_address] 
-
-	print("active columns addresses: {}".format(active_columns_addresses))
+		column_highest_score_address = overlap_score.index(max(overlap_score))
+		active_columns_addresses[ac] = column_highest_score_address
+		overlap_score[column_highest_score_address] = 0
+#	print("active columns addresses: {}".format(active_columns_addresses))
 
 	# Learning: look at active column's proximal dendrites and strengthen or weaken the synapse permanance
-	learning_rate = 0.1
-	permanance = [[0.0]*n_proximal_synapses]*n_active_columns
+	learning_rate = 1
+	permanance = [[0]*n_synapses_proximal]*n_active_columns
 
 	for ac in range(n_active_columns):
-		c = active_columns_addresses[ac] 
-		for s in range(n_proximal_synapses):
-			synapse = cortex.getRegions()[0].getColumns()[c].getProximalDendrite().getSynapses()[s]
+		c = active_columns_addresses[ac]
+		proximal_dendrite = region.getColumns()[c].getProximalDendrites()[0]
+		for s in range(n_synapses_proximal):
+			synapse = proximal_dendrite.getSynapses()[s]
 			address = synapse.getConnectionAddress()
 			if inputs[address] == 1:
 				synapse.updatePermanance(learning_rate)
 			else:
 				synapse.updatePermanance(-learning_rate)
 			permanance[ac][s] = synapse.getPermanance()
-
-	print(permanance)
+	print("permanance: {}".format(permanance))
 
 	#update neuron axon output
+	for c in range(n_columns):
+		for n in range(n_neurons):
+			region.getColumns()[c].getNeurons()[n].setAxonOutput(0)
+
 	for ac in range(n_active_columns):
 		for n in range(n_neurons):
-			cortex.getRegions()[0].getColumns()[ac].getNeurons()[n].setAxonOutput(1)
+			c = active_columns_addresses[ac]
+			region.getColumns()[c].getNeurons()[n].setAxonOutput(1)
 
-	return cortex
+	return region
