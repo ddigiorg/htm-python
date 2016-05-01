@@ -24,22 +24,22 @@ n_synapses  = 5 # Number of synapses per dendrite
 region   = None
 
 # Input Setup
-n_inputs = 20
-inputs0 = [0]*n_inputs
-inputs0[0] = 1
-inputs0[1] = 1
-inputs0[2] = 1
-inputs0[3] = 1
-inputs0[4] = 1
+n_inputs = 2
+n_bits = 20
+inputs = [None] * n_inputs
+for i in range(2):
+	inputs[i] = [0] * n_bits
+inputs[0][0] = 1
+inputs[0][1] = 1
+inputs[0][2] = 1
+inputs[0][3] = 1
+inputs[0][4] = 1
 
-inputs1 = [0]*n_inputs
-inputs1[1] = 1 
-inputs1[2] = 1
-inputs1[3] = 1
-inputs1[4] = 1
-inputs1[5] = 1
-
-inputs = inputs0
+inputs[1][1] = 1 
+inputs[1][2] = 1
+inputs[1][3] = 1
+inputs[1][4] = 1
+inputs[1][5] = 1
 
 # OpenGL Global Variables
 n_x = n_columns # x axis for opengl
@@ -51,24 +51,25 @@ region_colors = np.array([[[ colors_dict[0] ]*n_z]*n_y]*n_x, dtype=np.float16)
 flag = 0
 
 def loop():
-	global inputs, inputs0, inputs1, region, n_regions, n_columns, n_neurons, n_dendrites, n_synapses
+	global inputs, region, n_regions, n_columns, n_neurons, n_dendrites, n_synapses
 	global n_x, n_y, n_z, region_colors
 	global colors_dict
 	global flag
 
 	if flag == 0:
-		inputs = inputs0
+		temp = inputs[0]
 		flag = 1
 	elif flag == 1:
-		inputs = inputs1
+		temp = inputs[1]
 		flag = 0
 
-	cortex.runSpatialPooler(inputs, region)
+	active_columns_addresses = cortex.runSpatialPooler(temp, region)
+	cortex.runTemporalPooler(active_columns_addresses, region)
 
 	for c in range(n_columns):
 		for n in range(n_neurons):
-			state = region.getColumns()[c].getNeurons()[n].getAxonOutput()
-			region_colors[c][n][0] = colors_dict[state]
+			axon = region.getColumns()[c].getNeurons()[n].getAxon()
+			region_colors[c][n][0] = colors_dict[axon]
 		
 	draw.updateCubes(region_colors)
 	draw.updateCamera()
@@ -79,8 +80,8 @@ def main():
 	global n_x, n_y, n_z
 	
 	# Initialize cortex
-	region = cortex.initRegion(inputs0, n_columns, n_neurons, n_dendrites, n_synapses)
-	region = cortex.initConnections(inputs0, region)
+	region = cortex.initRegion(inputs[0], n_columns, n_neurons, n_dendrites, n_synapses)
+	region = cortex.initConnections(inputs[0], region)
 
 
 	'''	

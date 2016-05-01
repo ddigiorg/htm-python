@@ -11,6 +11,8 @@ n_synapses_proximal = None
 n_synapses_apical = None
 n_synapses_basal = None
 
+n_active_columns = None
+
 class Cortex(object):
 	def __init__(self, regions):
 		self.regions = regions
@@ -40,10 +42,10 @@ class Neuron(object):
 	def __init__(self, dendrites_apical, dendrites_basal):
 		self.dendrites_apical = dendrites_apical
 		self.dendrites_basal  = dendrites_basal
-		self.axon_output = 0
+		self.axon = 0
 
-	def setAxonOutput(self, value):
-		self.axon_output = value
+	def setAxon(self, value):
+		self.axon = value
 
 	def getApicalDendrites(self):
 		return self.dendrites_apical
@@ -51,8 +53,8 @@ class Neuron(object):
 	def getBasalDendrites(self):
 		return self.dendrites_basal
 
-	def getAxonOutput(self):
-		return self.axon_output
+	def getAxon(self):
+		return self.axon
 
 class Dendrite(object):
 	def __init__(self, synapses):
@@ -159,7 +161,7 @@ def initConnections(inputs, region):
 	return region
 
 def runSpatialPooler(inputs, region):
-	global n_columns, n_neurons, n_dendrites_proximal, n_synapses_proximal
+	global n_columns, n_active_columns,  n_neurons, n_dendrites_proximal, n_synapses_proximal
 
 	synapse_threshold = 20
 	active_percentage = 0.02
@@ -201,19 +203,26 @@ def runSpatialPooler(inputs, region):
 			else:
 				synapse.updatePermanance(-learning_rate)
 			permanance[ac][s] = synapse.getPermanance()
-	print("permanance: {}".format(permanance))
+#	print("permanance: {}".format(permanance))
 
-	#update neuron axon output
+	return active_columns_addresses
+
+def runTemporalPooler(active_columns_addresses, region):
+	global n_columns, n_active_columns, n_neurons, n_dendrites_proximal, n_synapses_proximal
+
+	updateNeuronAxon(active_columns_addresses, region)	
+
+	return region
+
+def updateNeuronAxon(active_columns_addresses, region):
+	global n_columns, n_active_columns, n_neurons, n_dendrites_proximal, n_synapses_proximal
+
 	for c in range(n_columns):
 		for n in range(n_neurons):
-			region.getColumns()[c].getNeurons()[n].setAxonOutput(0)
+			region.getColumns()[c].getNeurons()[n].setAxon(0)
 
 	for ac in range(n_active_columns):
 		for n in range(n_neurons):
 			c = active_columns_addresses[ac]
-			region.getColumns()[c].getNeurons()[n].setAxonOutput(1)
+			region.getColumns()[c].getNeurons()[n].setAxon(1)
 
-	return region
-
-def runTemporalPooler(region):
-	return region
