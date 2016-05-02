@@ -19,7 +19,7 @@ colors_dict = {0: [0.5, 0.5, 0.5], # Neuron inactive state
 n_regions   = 1 # Number of regions per cortex
 n_columns   = 10 # Number of columns per region
 n_neurons   = 5 # Number of neurons per column
-n_dendrites = 1 # Number of dendrites per neuron
+n_dendrites = 10 # Number of dendrites per neuron
 n_synapses  = 5 # Number of synapses per dendrite
 region   = None
 
@@ -35,11 +35,11 @@ inputs[0][2] = 1
 inputs[0][3] = 1
 inputs[0][4] = 1
 
-inputs[1][1] = 1 
-inputs[1][2] = 1
-inputs[1][3] = 1
-inputs[1][4] = 1
-inputs[1][5] = 1
+inputs[1][5] = 1 
+inputs[1][6] = 1
+inputs[1][7] = 1
+inputs[1][8] = 1
+inputs[1][9] = 1
 
 # OpenGL Global Variables
 n_x = n_columns # x axis for opengl

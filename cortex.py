@@ -13,6 +13,10 @@ n_synapses_basal = None
 
 n_active_columns = None
 
+INACTIVE = 0
+ACTIVE = 1
+PREDICTIVE = 2
+
 class Cortex(object):
 	def __init__(self, regions):
 		self.regions = regions
@@ -95,7 +99,8 @@ def initDendrites(n_dendrites, n_synapses):
 def initNeurons(n_neurons):
 	neurons = [None]*n_neurons
 	for n in range(n_neurons):
-		dendrites_apical = initDendrites(n_dendrites_apical, n_synapses_apical)
+#		dendrites_apical = initDendrites(n_dendrites_apical, n_synapses_apical)
+		dendrites_apical = None
 		dendrites_basal  = initDendrites(n_dendrites_basal , n_synapses_basal )
 		neurons[n] = Neuron(dendrites_apical, dendrites_basal)
 
@@ -210,19 +215,29 @@ def runSpatialPooler(inputs, region):
 def runTemporalPooler(active_columns_addresses, region):
 	global n_columns, n_active_columns, n_neurons, n_dendrites_proximal, n_synapses_proximal
 
-	updateNeuronAxon(active_columns_addresses, region)	
-
+	zeroNeuronAxon(region)
+	
+	# For every active columns check if neurons in predeictive state.  If so activate them
+	for ac in range(n_active_columns):
+		axon_predictive_state = False
+		c = active_columns_addresses[ac]	
+		column = region.getColumns()[c]
+		for n in range(n_neurons):
+			neuron = column.getNeurons()[n] 
+			axon = neuron.getAxon()
+			if axon == PREDICTIVE:
+				neuron.setAxon(ACTIVE)
+				axon_predictive_state = True
+		if axon_predictive_state == False:
+			for n in range(n_neurons):
+				neuron = column.getNeurons()[n] 
+				neuron.setAxon(ACTIVE)
+			
 	return region
 
-def updateNeuronAxon(active_columns_addresses, region):
+def zeroNeuronAxon(region):
 	global n_columns, n_active_columns, n_neurons, n_dendrites_proximal, n_synapses_proximal
 
 	for c in range(n_columns):
 		for n in range(n_neurons):
-			region.getColumns()[c].getNeurons()[n].setAxon(0)
-
-	for ac in range(n_active_columns):
-		for n in range(n_neurons):
-			c = active_columns_addresses[ac]
-			region.getColumns()[c].getNeurons()[n].setAxon(1)
-
+			region.getColumns()[c].getNeurons()[n].setAxon(INACTIVE)

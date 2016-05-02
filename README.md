@@ -18,10 +18,10 @@ Neuroscience: The cortex contains 6 layers(5 layers of neurons and an axon layer
 + Pial Surface
 + Layer 1: 
 + Layer 2: 
-+ Layer 3: One of the primary feed-forward layers of neurons
-+ Layer 4: 
-+ Layer 5: 
-+ Layer 6: 
++ Layer 3: One of the primary feedforward layers. Multiple cells per column useful for inference and prediction of moving images (Numenta).
++ Layer 4: One of the primary feedforward layers. One cell per column useful in forming representations that are invariant to spatial changes (Numenta).
++ Layer 5: Motor behavior
++ Layer 6: Feedback
 + White Matter
 
 ###Columns
@@ -45,7 +45,7 @@ Neuron Outputs
 
 ###Dendrite Segments
 
-+ Proximal Dendrite Segments: recieve feedforward input and used to put a neuron in an active state.
++ Proximal Dendrite Segment: recieve feedforward input and used to put a neuron in an active state.
 + Apical Dendrite Segments: recieve feedback from higher cortical layers and used to put a neuron in a predictive state.
 + Basal Dendrite Segments: recieve lateral input from nearby neurons and is used to put a neuron in a predictive state.
 
@@ -54,10 +54,20 @@ Neuron Outputs
 + Potential Synapses: Represents all the axons that pass close enough to a dendrite segment that they could potentially form a synapse.
 + Permanance: a scalar value representing the range of connectedness between an axon and a dendrite.  If the permanance is above a certain threshold, the synapse is connected.
 
-##Spatial Pooler
+##Spatial Pooler Function
 
-Operates at the columnar level by using each column's proximal dendrite input.
+The spatial pooler function operates at the columnar level by using each column's proximal dendrite input.
 
-##Temporal Pooler
+htm whitepaper page 28
 
-Operates at the neuronal level by by using each neuron's basal dendrite input.  Apical dendrites have not been implemented in this version of the algorithm.
+1. Input: Each column sees a random subset, or potential pool, of the input bits.
+2. Compute the Overlap Score: How many of column's connected synapses(permanance above threshold) are binary 1.
+3. Enforce sparcity by selecting active columns from the top overlap scores.
+4. Learn by looking at all the active columns and strengthening or weakening connections.
+5. Output: active columns
+
+##Temporal Pooler Function
+
+The temporal pooler function operates at the neuronal level by by using each neuron's basal dendrite input.  Apical dendrites have not been implemented in this version of the algorithm.
+
+htm whitepaper page 30
