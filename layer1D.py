@@ -46,10 +46,14 @@ def spatialPooler(inputVector, sPermProximal, thresholds):
 	return activeColumnAddresses
 
 
-inputVec = [1, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+inputVec = np.array([1, 1, 0, 0, 0, 0, 0, 0, 0, 0])
 nColumns = 5
 nSynapses = len(inputVec)
 
-perm, thresh = initLayer(nColumns, nSynapses)
-for i in range(10):
-	activeColumns = spatialPooler(inputVec, perm, thresh)
+xIndices = np.array([0, 4])
+test = inputVec[np.ix_(xIndices)]
+print(test)
+
+#perm, thresh = initLayer(nColumns, nSynapses)
+#for i in range(10):
+#	activeColumns = spatialPooler(inputVec, perm, thresh)
