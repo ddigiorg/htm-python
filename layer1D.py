@@ -3,57 +3,69 @@ import numpy as np
 
 # Naming Convention:
 # c means column
+# p means proximal dendrite
 # s means synapse
 # n means number of
 
-def initLayer(nColumns, nSynapses):
-	sThreshold = 20
+def initLayer(inputs, nColumns):
 
-	# Get the shape of proximal dendrite segments: synapses (x-axis) by column (y-axis)
-	shapeProximal = (nSynapses, nColumns)
+	inputConnectivity = 0.5
+	nSynapses = int(len(inputs) * inputConnectivity)
+	psPermThresh = 20
+	psShape = (nSynapses, nColumns)
+
+	# Potential Pool: Every column gets a random subset of input bits
+	indexList = list(range(len(inputs)))
+	psIndices = np.zeros(psShape, dtype=np.int16)
+	psInputs  = np.zeros(psShape, dtype=np.int8)
+	for c in range(nColumns):
+		rand.shuffle(indexList)
+		psIndices[c] = np.array(indexList[0 : nSynapses])
+		psInputs[c] = inputs[np.ix_(psIndices[c])]
 	
-	# Synapse Permanance 
-	sPermProximal = np.random.random_integers(sThreshold, sThreshold + 1, shapeProximal)
+	# Initialize each column's proximal synapse permanance values
+	psPerms = np.random.random_integers(psPermThresh, psPermThresh + 1, psShape)
 
-	thresholds = np.full(shapeProximal, sThreshold, dtype=np.int8)
+	# Initialize each column's proximal synapse permanance threshold values
+	psPermThreshs = np.full(psShape, psPermThresh, dtype=np.int8)
 
-	return sPermProximal, thresholds
+	return psInputs, psIndices, psPerms, psPermThreshs
 
-def spatialPooler(inputVector, sPermProximal, thresholds):
+def spatialPooler(psInputs, psIndices, psPerms, psPermThreshs, nColumns):
 	
-	# If permanance is greater than threshold then true, false otherwise
-	connectedSynapses = np.greater(sPermProximal, thresholds) 
+	# Calculate if proximal synapse is connected to its input based on its permanance value
+	psConnected = np.greater(psPerms, psPermThreshs) 
 
-	overlapScores = np.dot(inputVector, connectedSynapses)
+	# Overlap Scores: Calculate by performing row-wise dot product
+	cOverlapScores = np.einsum('ij,ij->i', psInputs, psConnected) 
 
 	# Inhibition
-	percentageActiveColumns = 0.4
-	nActiveColumns = np.int16(np.ceil(nColumns * percentageActiveColumns))
-	activeColumnAddresses = np.zeros(nActiveColumns, dtype=np.int16)
-
-	for c in range(nActiveColumns):
-		activeColumnAddresses[c] = np.argmax(overlapScores)
-		overlapScores[activeColumnAddresses[c]] = 0	
+	cActivePercent = 0.4
+	ncActive = np.int16(np.ceil(nColumns * cActivePercent))
+	cActiveIndices = np.zeros(ncActive, dtype=np.int16)
+	'''NOTE: MAY HAVE TO SKIP COLUMNS THAT HAVE OVERLAP SCORE < 1 ''' 
+	for ac in range(ncActive):
+		cActiveIndices[ac] = np.argmax(cOverlapScores)
+		cOverlapScores[cActiveIndices[ac]] = -1	
 
 	# Learning
-	learnRate = 1
-	learnArray = learnRate * (inputVec - np.less_equal(inputVec, thresholds[:,0]))
-	for cAddress in activeColumnAddresses:
-		sPermProximal[:,cAddress] = sPermProximal[:,cAddress] + learnArray
+	psLearnRate = 1
+	psLowerPerm = 0
+	psUpperPerm = 99
+	for acIndex in cActiveIndices:
+		learnArray = psLearnRate * (2 * psInputs[acIndex] - 1)
+		psPerms[:,acIndex] = psPerms[:,acIndex] + learnArray
 
-	print(sPermProximal)
+	np.clip(psPerms, psLowerPerm, psUpperPerm, out=psPerms)
+	
+	return cActiveIndices
 
-	return activeColumnAddresses
 
-
-inputVec = np.array([1, 1, 0, 0, 0, 0, 0, 0, 0, 0])
+inputs = np.array([1, 1, 0, 0, 0, 0, 0, 0, 0, 0])
 nColumns = 5
-nSynapses = len(inputVec)
 
-xIndices = np.array([0, 4])
-test = inputVec[np.ix_(xIndices)]
-print(test)
+psInputs, psIndices, psPerms, psPermThreshs = initLayer(inputs, nColumns)
 
-#perm, thresh = initLayer(nColumns, nSynapses)
-#for i in range(10):
-#	activeColumns = spatialPooler(inputVec, perm, thresh)
+for i in range(10):
+	cActiveIndices = spatialPooler(psInputs, psIndices, psPerms, psPermThreshs, nColumns)
+	print(cActiveIndices)
