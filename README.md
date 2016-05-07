@@ -33,16 +33,16 @@ Macrocolumns are  vertical structures of neurons and can be broken down into a m
 
 The structure of an HTM cell, or neuron, is modeled after pyramidal neurons in the neocortex.  In a real neuron when it is in an active state the axon outputs a short burst of action potentials.  When it is in a predictive state the axon outputs a slower, steady rate of action potentials.  These action potentials are not modeled in the HTM.
 
-Neuron Inputs
+#####Neuron Inputs
 + Proximal Dendrites
 + Apical Dendrites
 + Basal Dendrites
 
-Neuron Outputs
-+ Axon: has 3 output states:
-	+ Inactive
-	+ Active
-	+ Prediction
+#####Neuron Outputs
+Axon: has 3 output states:
++ Inactive
++ Active
++ Prediction
 
 ####Dendrite Segments
 
@@ -56,9 +56,9 @@ Neuron Outputs
 + Permanance: A scalar value representing the range of connectedness between an axon and a dendrite.  If the permanance is above a certain threshold, the synapse is connected.
 + Index: Denotes what input or axon the synapse is paired with.
 
-##Spatial Pooler Function
+##Spatial Pooling Function
 
-The spatial pooler function operates on a layer of a cortical region.  It uses each column's proximal dendrite input to return active columns that reflect the greatest connectivity with that layer's input.
+The spatial pooling function operates on a layer of a cortical region.  It uses each column's proximal dendrite input to return active columns that reflect the greatest connectivity with that layer's input.
 
 1. Potential Pool: Each column sees a random subset of the input bits.
 2. Overlap Score: How many of column's connected synapses(permanance above threshold) are binary 1.
@@ -70,4 +70,3 @@ The spatial pooler function operates on a layer of a cortical region.  It uses e
 
 The temporal pooler function operates at the neuronal level by by using each neuron's basal dendrite input.  Apical dendrites have not been implemented in this version of the algorithm.
 
-htm whitepaper page 30
