@@ -5,137 +5,118 @@ import time
 def init_layer_neuron_states(n_time_steps, n_columns, n_neurons):
 	# Initialize binary 3D tensors indicating neuron active and predicted state at time steps
 
-	neuron_states_shape   = (n_time_steps, n_columns, n_neurons)
-	neuron_states_active  = np.zeros(neuron_states_shape, dtype=np.int8)
-#	neuron_states_active  = np.random.randint(2, size=neuron_states_shape)
-	neuron_states_predict = np.zeros(neuron_states_shape, dtype=np.int8)
-#	neuron_states_predict = np.random.randint(2, size=neuron_states_shape)
+	layer_states_shape   = (n_time_steps, n_columns, n_neurons)
+	layer_active_states  = np.zeros(layer_states_shape, dtype=np.int8)
+#	layer_active_states  = np.random.randint(2, size=layer_states_shape)
+	layer_predict_states = np.zeros(layer_states_shape, dtype=np.int8)
+	layer_predict_states[1][0][0] = 1
+	layer_predict_states[1][1][1] = 1
+	layer_predict_states[1][5][1] = 1
+#	layer_predict_states = np.random.randint(2, size=layer_states_shape)
 
-	return neuron_states_active, neuron_states_predict
+	return layer_active_states, layer_predict_states
 
 def init_layer_proximal_synapses(n_inputs, n_columns):
 	
 	connectivity = 0.5
-	proximal_synapse_threshold = 20
-	proximal_synapse_shape = (n_columns, n_inputs)
+	proximal_synapses_threshold = 20
+	proximal_synapses_shape = (n_columns, n_inputs * connectivity)
 
-	# Initialize proximal synapse values as a 2D array of 0s
-	proximal_synapse_values  = np.zeros(proximal_synapse_shape, dtype=np.int8)
-
-	# Initialize proximal synapse connections as a 2D array of binary values
-	proximal_synapse_connections = np.random.choice([0, 1], size=proximal_synapse_shape, p=[1-connectivity, connectivity])
+	# Initialize proximal synapse addresses to random 50% of input data
+	proximal_synapses_addresses  = np.random.choice(n_inputs, proximal_synapses_shape)
 
 	# Initialize proximal synapse permanances as a 2D array of integer values around the threshold value
-	temporary_permanances = np.random.random_integers(proximal_synapse_threshold, proximal_synapse_threshold + 1, proximal_synapse_shape)
-	proximal_synapse_permanances = temporary_permanances * proximal_synapse_connections
+	proximal_synapses_permanances = np.random.random_integers(proximal_synapses_threshold, proximal_synapses_threshold + 1, proximal_synapses_shape)
 
-	return proximal_synapse_values, proximal_synapse_permanances
+	return proximal_synapses_addresses, proximal_synapses_permanances
 
-def init_layer_basal_synapses(n_columns, n_neurons, n_basal_dendrites):
+def init_layer_basal_synapses(n_columns, n_neurons, n_basal_dendrites, n_basal_synapses):
 
-	n_basal_synapses = 20
-	basal_synapse_threshold = 20
+	basal_synapses_threshold = 20
 
-	basal_synapse_shape = (n_columns, n_neurons, n_basal_dendrites, n_basal_synapses)
+	layer_shape = n_columns * n_neurons
 
-	basal_synapse_indices = np.zeros(basal_synapse_shape + (2,), dtype=np.int16)
-	basal_synapse_values  = np.zeros(basal_synapse_shape, dtype=np.int8)
-	basal_synapse_permanances = np.random.random_integers(basal_synapse_threshold, basal_synapse_threshold + 1, basal_synapse_shape)
-	basal_synapse_thresholds = np.full(basal_synapse_shape, basal_synapse_threshold, dtype=np.int8)
+	# Initialize basal synapse addresses to array of None types.  Gets filled as Temporal Memory learns.
+	basal_synapses_addresses  = np.full(layer_shape, None, dtype=object)
 
-	neuron_indices = [(c, n) for c in range(n_columns) for n in range(n_neurons)]
+	# Initialize basal synapse permanances to array of None types.  Gets filled as Temporal Memory learns.
+	basal_synapses_permanances = np.full(layer_shape, None, dtype=object)
+ 
+	return basal_synapses_addresses, basal_synapses_permanances
 
-	start = time.time()
-	neuron_indices = np.random.permutation(neuron_indices[0:20])
-	end = time.time()
-	print("BS Init Time: {}s".format(end - start))
-
-	for c in range(n_columns):
-		for n in range(n_neurons):
-			neuron_indices = np.random.permutation(neuron_indices)
-			for bd in range(n_basal_dendrites):
-				basal_synapse_indices[c][n][bd] = neuron_indices[bd:bd+n_basal_synapses]
-
-	print(basal_synapse_indices[0][0])
-
-	return basal_synapse_values, basal_synapse_indices, basal_synapse_permanances, basal_synapse_thresholds
-
-def spatial_pooling(inputs, n_columns, proximal_synapse_values, proximal_synapse_permanances):
+def spatial_pooling(inputs, n_columns, proximal_synapses_addresses, proximal_synapses_permanances):
 	
-	proximal_synapse_threshold = 20
+	proximal_synapses_threshold = 20
 
-	print(inputs)
+	# Aquire the proximal synapses inputs: 2D array of binary values from the addresses of the input data
+	proximal_synapses_inputs = inputs[proximal_synapses_addresses]
 
 	# Calculate if proximal synapse is connected: 2D array of boolean values if permanance value is greater than threshold
-	proximal_synapse_is_connected = proximal_synapse_permanances > proximal_synapse_threshold
-	print(proximal_synapse_is_connected + 0)
+	proximal_synapses_connections = proximal_synapses_permanances > proximal_synapses_threshold
 	
 	# Calculate proximal synapse values: 2D array of binary values of the input value if the proximal synapse is connected
-	proximal_synapse_values = np.logical_and(inputs, proximal_synapse_is_connected) + 0
-	print(proximal_synapse_values)
+	proximal_synapses_values = np.logical_and(proximal_synapses_inputs, proximal_synapses_connections) + 0
 
 	# Calculate overlap scores: 1D array of integers indicating the sum of each column's proximal synapse values
-	overlap_scores = np.einsum('ij->i', proximal_synapse_values) 
-	print(overlap_scores)
+	overlap_scores = np.sum(proximal_synapses_values, axis=1) 
 
-	'''
 	# Inhibition
 	active_columns_percent = 0.2
 	n_active_columns = np.int16(np.ceil(n_columns * active_columns_percent))
-	active_column_indices = np.zeros(n_active_columns, dtype=np.int16)
-	column_states = np.zeros(n_columns, dtype=np.int8)	
-
-	# NOTE: MAY HAVE TO SKIP COLUMNS THAT HAVE OVERLAP SCORE < 1 
-	for ac in range(n_active_columns):
-		greatest_overlap_index =  np.argmax(overlap_scores)
-		active_column_indices[ac] = greatest_overlap_index
-		column_states[greatest_overlap_index] = 1
-		overlap_scores[greatest_overlap_index] = -1	
+	
+	active_columns_addresses = np.argpartition(-overlap_scores, n_active_columns)[:n_active_columns]
+	column_states = np.zeros(n_columns, dtype=np.int8)
+	column_states[active_columns_addresses] = 1
 
 	# Learning
-	proximal_synapse_learn_rate = 1
-	proximal_synapse_permanance_lower = 0
-	proximal_synapse_permanance_upper = 99
-	for ac_index in active_column_indices:
-		learn_array = proximal_synapse_learn_rate * (2 * proximal_synapse_values[ac_index] - 1)
-		proximal_synapse_permanances[ac_index] = proximal_synapse_permanances[ac_index] + learn_array
+	proximal_synapses_learn_rate = 1
+	proximal_synapses_permanance_lower = 0
+	proximal_synapses_permanance_upper = 99
 
-	np.clip(proximal_synapse_permanances, proximal_synapse_permanance_lower, proximal_synapse_permanance_upper, out=proximal_synapse_permanances)
+	learn_matrix = proximal_synapses_learn_rate * (2 * proximal_synapses_values[active_columns_addresses] - 1)
+	proximal_synapses_permanances[active_columns_addresses] += learn_matrix
 
-	return column_states, active_column_indices
+	np.clip(proximal_synapses_permanances, proximal_synapses_permanance_lower, proximal_synapses_permanance_upper, out=proximal_synapses_permanances)
+
+	return column_states, active_columns_addresses
+
+def temporal_memory(n_columns, n_neurons, layer_active_states, layer_predict_states, column_states, active_columns_addresses, basal_synapses_addresses, basal_synapses_permanances):
+
+
+	# Active columns neurons that were previously in the predicted state are activated
+	layer_active_states[0] = np.zeros((n_columns, n_neurons))
+	layer_active_states[0][active_columns_addresses] = layer_predict_states[1][active_columns_addresses]
+
+	# Test if an active column has no neurons in the previous predicted state, activate all neurons in the column
+	test = np.logical_not( np.any(layer_active_states[0][active_columns_addresses], axis=1) )
+	layer_active_states[0][active_columns_addresses] = np.logical_and(1, test)
+
+
+#	print(active_columns_addresses)
+	print(layer_active_states[0])
+
 	'''
-
-def temporal_memory(n_neurons, neuron_states_active, neuron_states_predict, column_states, active_column_indices, basal_synapse_values, basal_synapse_indices, basal_synapse_permanances, basal_synapse_thresholds):
-
-	neuron_states_active[0] = neuron_states_active[1]
-
-	# Assign the basal synapse the active state value it points to
-	basal_synapse_values = neuron_states_active[0][basal_synapse_indices[:, :, :, :, 0], basal_synapse_indices[:, :, :, :, 1]]	
-
-#	print(basal_synapse_indices[0][0][0])
-
-	# Determine active state of active column neurons
-	'''MAKE THIS MORE OPTIMIZED'''
-	#nActive = np.einsum('i,ij->ij', cActive, nPredict) 
-	for ac_index in active_column_indices:
+	# Determine the state of active column neurons
+	for ac_index in active_columns_addresses:
 		flag = 0
 		for n in range(n_neurons):
-			active = neuron_states_active[0][ac_index][n]
-			predict = neuron_states_predict[0][ac_index][n]			
+			active = layer_active_states[1][ac_index][n]
+			predict = layer_predict_states[0][ac_index][n]			
 			if predict == 1:
 				active == 1
 				flag = 1
 		if flag == 0:
 			for n in range(n_neurons):
-				neuron_states_active[1][ac_index][n] = 1
+				layer_active_states[1][ac_index][n] = 1
 
 	# Determine predictive state of all neurons
-#	for c in range(numColumns):
-#	test = np.dot(nActive[1][0], bsValues[0]
-	
-#	print(nActive)
+	'''
 
-	return neuron_states_active	
+	# Load current states to previous states
+	layer_active_states[1] = layer_active_states[0]
+	layer_predict_states[1] = layer_predict_states[0]
+
+	return layer_active_states
 
 
 temp = [0]*10
@@ -146,30 +127,31 @@ inputs = np.array(temp)
 n_inputs = len(inputs)
 n_time_steps = 2
 n_columns = 10 #2048
-n_neurons = 1  #32
+n_neurons = 2  #32
 n_basal_dendrites = 1
+n_basal_synapses = 20
 
 #print("Initializing...")
 
-neuron_states_active, neuron_states_predict = init_layer_neuron_states(n_time_steps, n_columns, n_neurons)
+layer_active_states, layer_predict_states = init_layer_neuron_states(n_time_steps, n_columns, n_neurons)
 
 start = time.time()
-proximal_synapse_values, proximal_synapse_permanances = init_layer_proximal_synapses(n_inputs, n_columns)
+proximal_synapses_addresses, proximal_synapses_permanances = init_layer_proximal_synapses(n_inputs, n_columns)
 end = time.time()
 print("PS Init Time: {}s".format(end - start))
 
-#start = time.time()
-#basal_synapse_values, basal_synapse_indices, basal_synapse_permanances, basal_synapse_thresholds = init_layer_basal_synapses(n_columns, n_neurons, n_basal_dendrites)
-#end = time.time()
-#print("BS Init Time: {}s".format(end - start))
+start = time.time()
+basal_synapses_addresses, basal_synapses_permanances = init_layer_basal_synapses(n_columns, n_neurons, n_basal_dendrites, n_basal_synapses)
+end = time.time()
+print("BS Init Time: {}s".format(end - start))
 
 for i in range(1):
 	start = time.time()
-	column_states, active_column_indices = spatial_pooling(inputs, n_columns, proximal_synapse_values, proximal_synapse_permanances)
+	column_states, active_columns_addresses = spatial_pooling(inputs, n_columns, proximal_synapses_addresses, proximal_synapses_permanances)
 	end = time.time()
 	print("Spatial Pooling Time: {}s".format(end - start))
 	
-#	start = time.time()
-#	neuron_states_active = temporal_memory(n_neurons, neuron_states_active, neuron_states_predict, column_states, active_column_indices, basal_synapse_values, basal_synapse_indices, basal_synapse_permanances, basal_synapse_thresholds)
-#	end = time.time()
-#	print("Temporal Memory Time: {}s".format(end - start))
+	start = time.time()
+	neuron_states_active = temporal_memory(n_columns, n_neurons, layer_active_states, layer_predict_states, column_states, active_columns_addresses, basal_synapses_addresses, basal_synapses_permanances)
+	end = time.time()
+	print("Temporal Memory Time: {}s".format(end - start))
