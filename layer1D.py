@@ -9,9 +9,9 @@ def init_layer_neuron_states(n_time_steps, n_columns, n_neurons):
 	layer_active_states  = np.zeros(layer_states_shape, dtype=np.int8)
 #	layer_active_states  = np.random.randint(2, size=layer_states_shape)
 	layer_predict_states = np.zeros(layer_states_shape, dtype=np.int8)
-	layer_predict_states[1][0][0] = 1
-	layer_predict_states[1][1][1] = 1
-	layer_predict_states[1][5][1] = 1
+#	layer_predict_states[1][0][0] = 1
+#	layer_predict_states[1][1][1] = 1
+#	layer_predict_states[1][2][0] = 1
 #	layer_predict_states = np.random.randint(2, size=layer_states_shape)
 
 	return layer_active_states, layer_predict_states
@@ -34,7 +34,7 @@ def init_layer_basal_synapses(n_columns, n_neurons, n_basal_dendrites, n_basal_s
 
 	basal_synapses_threshold = 20
 
-	layer_shape = n_columns * n_neurons
+	layer_shape = (n_columns, n_neurons)
 
 	# Initialize basal synapse addresses to array of None types.  Gets filled as Temporal Memory learns.
 	basal_synapses_addresses  = np.full(layer_shape, None, dtype=object)
@@ -45,19 +45,15 @@ def init_layer_basal_synapses(n_columns, n_neurons, n_basal_dendrites, n_basal_s
 	return basal_synapses_addresses, basal_synapses_permanances
 
 def spatial_pooling(inputs, n_columns, proximal_synapses_addresses, proximal_synapses_permanances):
+
+	# NEEDS BOOSTING
+	# NEEDS PLASTICITY: WHEN A SYNAPSE PERMANANCE = 0 RANDOMIZE THAT SYNAPSE ADDRESS
 	
 	proximal_synapses_threshold = 20
 
-	# Aquire the proximal synapses inputs: 2D array of binary values from the addresses of the input data
-	proximal_synapses_inputs = inputs[proximal_synapses_addresses]
-
-	# Calculate if proximal synapse is connected: 2D array of boolean values if permanance value is greater than threshold
-	proximal_synapses_connections = proximal_synapses_permanances > proximal_synapses_threshold
-	
-	# Calculate proximal synapse values: 2D array of binary values of the input value if the proximal synapse is connected
-	proximal_synapses_values = np.logical_and(proximal_synapses_inputs, proximal_synapses_connections) + 0
-
-	# Calculate overlap scores: 1D array of integers indicating the sum of each column's proximal synapse values
+	# Overlap
+	if_proximal_synapses_connected = proximal_synapses_permanances > proximal_synapses_threshold
+	proximal_synapses_values = np.logical_and(inputs[proximal_synapses_addresses], if_proximal_synapses_connected)
 	overlap_scores = np.sum(proximal_synapses_values, axis=1) 
 
 	# Inhibition
@@ -82,35 +78,35 @@ def spatial_pooling(inputs, n_columns, proximal_synapses_addresses, proximal_syn
 
 def temporal_memory(n_columns, n_neurons, layer_active_states, layer_predict_states, column_states, active_columns_addresses, basal_synapses_addresses, basal_synapses_permanances):
 
-
-	# Active columns neurons that were previously in the predicted state are activated
+	# Calculate active state for each neuron in the active columns
 	layer_active_states[0] = np.zeros((n_columns, n_neurons))
 	layer_active_states[0][active_columns_addresses] = layer_predict_states[1][active_columns_addresses]
+	if_no_active_neurons = np.logical_not( np.any(layer_active_states[0][active_columns_addresses], axis=1) )
+	full_column_of_active_neurons = np.full(n_neurons, 1, dtype=np.int8) 
+	layer_active_states[0][active_columns_addresses] += full_column_of_active_neurons * if_no_active_neurons[:,None]
 
-	# Test if an active column has no neurons in the previous predicted state, activate all neurons in the column
-	test = np.logical_not( np.any(layer_active_states[0][active_columns_addresses], axis=1) )
-	layer_active_states[0][active_columns_addresses] = np.logical_and(1, test)
-
-
-#	print(active_columns_addresses)
 	print(layer_active_states[0])
 
-	'''
-	# Determine the state of active column neurons
-	for ac_index in active_columns_addresses:
-		flag = 0
-		for n in range(n_neurons):
-			active = layer_active_states[1][ac_index][n]
-			predict = layer_predict_states[0][ac_index][n]			
-			if predict == 1:
-				active == 1
-				flag = 1
-		if flag == 0:
-			for n in range(n_neurons):
-				layer_active_states[1][ac_index][n] = 1
+	print(active_columns_addresses)
 
-	# Determine predictive state of all neurons
-	'''
+	active_neuron_addresses = np.argwhere(layer_active_states[0])
+	print(active_neuron_addresses)
+	print(basal_synapses_addresses[active_neuron_addresses[:,0], active_neuron_addresses[:,1]])
+
+#	print(basal_synapses_addresses)
+#	print(basal_synapses_addresses[active_columns_addresses])
+#	print(basal_synapses_permanances[active_columns_addresses])
+
+
+#	if np.any(basal_synapses_addresses):
+#		print("test")
+#	else:
+		
+	# Calculate the predictive state for each neuron
+
+	
+	# Learning
+
 
 	# Load current states to previous states
 	layer_active_states[1] = layer_active_states[0]
@@ -127,7 +123,7 @@ inputs = np.array(temp)
 n_inputs = len(inputs)
 n_time_steps = 2
 n_columns = 10 #2048
-n_neurons = 2  #32
+n_neurons = 5  #32
 n_basal_dendrites = 1
 n_basal_synapses = 20
 
