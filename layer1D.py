@@ -81,17 +81,20 @@ def temporal_memory(n_columns, n_neurons, layer_active_states, layer_predict_sta
 	# Calculate active state for each neuron in the active columns
 	layer_active_states[0] = np.zeros((n_columns, n_neurons))
 	layer_active_states[0][active_columns_addresses] = layer_predict_states[1][active_columns_addresses]
-	if_no_active_neurons = np.logical_not( np.any(layer_active_states[0][active_columns_addresses], axis=1) )
-	full_column_of_active_neurons = np.full(n_neurons, 1, dtype=np.int8) 
-	layer_active_states[0][active_columns_addresses] += full_column_of_active_neurons * if_no_active_neurons[:,None]
+	if_no_active_neurons = np.logical_not( np.any(layer_active_states[0][active_columns_addresses], axis=1) )[:,None] 
+#	full_column_of_active_neurons = np.full(n_neurons, 1, dtype=np.int8) 
 
-	print(layer_active_states[0])
+	print(if_no_active_neurons)	
 
-	print(active_columns_addresses)
+#	layer_active_states[0][active_columns_addresses] = full_column_of_active_neurons * if_no_active_neurons
+
+#	print(layer_active_states[0])
+
+#	print(active_columns_addresses)
 
 	active_neuron_addresses = np.argwhere(layer_active_states[0])
-	print(active_neuron_addresses)
-	print(basal_synapses_addresses[active_neuron_addresses[:,0], active_neuron_addresses[:,1]])
+#	print(active_neuron_addresses)
+#	print(basal_synapses_addresses[active_neuron_addresses[:,0], active_neuron_addresses[:,1]])
 
 #	print(basal_synapses_addresses)
 #	print(basal_synapses_addresses[active_columns_addresses])
