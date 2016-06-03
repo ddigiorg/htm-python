@@ -1,9 +1,10 @@
 ###Input SDR
-
+~~~~
+input_value
 rows: inputs
-dtype: binary (int8)
-0001100...
-
+dtype: int8
+value: binary
+~~~~
 
 ###Spatial Pooling
 
@@ -21,7 +22,7 @@ value: 0 to num inputs - 1
 init: random address of input SDR
 ~~~~
 ~~~~
-ps_permanances
+ps_permanences
 dim 0: columns (32)
 dim 1: synapses (16)
 dtype: int8
@@ -32,8 +33,8 @@ init: random number at or 1 above proximal synapse threshold
 #####Overlap
 
 Determine the overlap score by summing the proximal synapse values of each column.
-+ If a synapse permanance is above the threshold and the input SDR value at that synapse address is 1, then the synapse value is 1.  
-+ If a synapse permanance is below the threshold or the input SDR value at that synapse address is 0, then the synapse value is 0.
++ Synapse value is 1 if synapse permanence > theshold and the input value at that synapse address is 1  
++ Synapse value is 0 if synapse permanence < threshold or the input value at that synapse address is 0
 
 #####Inhibition
 
@@ -42,8 +43,8 @@ Determine the addresses of active columns by picking a percentage of columns wit
 #####Learning
 
 Update the synapse permanances of active columns.  
-+ If the synapse value is 1, increment the synapse permanance
-+ If the synapse value is 0, decrement the synapse permanance
++ Increment synapse permanence if the synapse value is 1
++ Decrement synapse permanence if the synapse value is 0
 + Bound the synapse permanance between 0 and 100
 
 #####Plasticity
