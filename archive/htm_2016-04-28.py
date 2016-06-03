@@ -1,3 +1,8 @@
+'''
+Matrix Implementation of HTM
+2016-04-28
+'''
+
 import random as rand
 import numpy as np
 import time
