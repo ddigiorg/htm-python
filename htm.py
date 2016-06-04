@@ -83,42 +83,10 @@ def spatial_pooling(inputs, n_columns, proximal_synapses_addresses, proximal_syn
 
 def temporal_memory(n_columns, n_neurons, layer_active_states, layer_predict_states, column_states, active_columns_addresses, basal_synapses_addresses, basal_synapses_permanances):
 
-	# Calculate active state for each neuron in the active columns
-	layer_active_states[0] = np.zeros((n_columns, n_neurons))
-	layer_active_states[0][active_columns_addresses] = layer_predict_states[1][active_columns_addresses]
-	if_no_active_neurons = np.logical_not( np.any(layer_active_states[0][active_columns_addresses], axis=1) )[:,None] 
-#	full_column_of_active_neurons = np.full(n_neurons, 1, dtype=np.int8) 
+	for c in n_columns:
+		for n in n_neurons:
+			
 
-	print(if_no_active_neurons)	
-
-#	layer_active_states[0][active_columns_addresses] = full_column_of_active_neurons * if_no_active_neurons
-
-#	print(layer_active_states[0])
-
-#	print(active_columns_addresses)
-
-	active_neuron_addresses = np.argwhere(layer_active_states[0])
-#	print(active_neuron_addresses)
-#	print(basal_synapses_addresses[active_neuron_addresses[:,0], active_neuron_addresses[:,1]])
-
-#	print(basal_synapses_addresses)
-#	print(basal_synapses_addresses[active_columns_addresses])
-#	print(basal_synapses_permanances[active_columns_addresses])
-
-
-#	if np.any(basal_synapses_addresses):
-#		print("test")
-#	else:
-		
-	# Calculate the predictive state for each neuron
-
-	
-	# Learning
-
-
-	# Load current states to previous states
-	layer_active_states[1] = layer_active_states[0]
-	layer_predict_states[1] = layer_predict_states[0]
 
 	return layer_active_states
 

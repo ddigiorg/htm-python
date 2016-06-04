@@ -115,9 +115,13 @@ init: 0
 
 #####Active State
 
-
+For each active column:
++ Set each neuron to active if neuron in previous time step is in a predicted state
++ Set all neurons in the column to active if no neurons in previous time step are in preticted state
 
 #####Predict State
+
+For each neuron:
 
 #####Learning
 
