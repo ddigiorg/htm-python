@@ -15,8 +15,8 @@ colors_dict = {"inactive": [0.5, 0.5, 0.5], # Neuron inactive state
 			   "predict":  [1.0, 0.0, 1.0]} # Neuron predictive state
 
 # Cortex Global Variables
-n_columns   = 2 # Number of columns per region
-n_neurons   = 2 # Number of neurons per column
+n_columns   = 16 # Number of columns per region
+n_neurons   = 8 # Number of neurons per column
 n_dendrites = 10 # Number of dendrites per neuron
 n_synapses  = 5 # Number of synapses per dendrite
 
@@ -41,33 +41,38 @@ inputs[1][9] = 1
 # OpenGL Global Variables
 n_cells_x = n_columns # x axis for opengl
 n_cells_y = n_neurons # y axis for opengl
-n_cells_z = 1         # z axis for opengl
 
-region_colors = np.array([[[ colors_dict["inactive"] ]*n_cells_z]*n_cells_y]*n_cells_x, dtype=np.float16)
+region_colors = np.array([[ colors_dict["inactive"] ]*n_cells_y]*n_cells_x, dtype=np.float16)
+
+flag = 0
 
 def loop():
 	global inputs, region, n_regions, n_columns, n_neurons, n_dendrites, n_synapses
-	global n_cells_x, n_cells_y, n_cells_z, region_colors
+	global n_cells_x, n_cells_y, region_colors
 	global colors_dict
+	global flag
 
-#	for c in range(n_columns):
-#		for n in range(n_neurons):
-#			region_colors[c][n][0] = colors_dict["inactive"]
-		
-	draw.updatePolygons(region_colors, n_cells_x, n_cells_y, n_cells_z)
+	if flag == 0: 
+		region_colors[0][0] = colors_dict["active"]
+		flag = 1
+	else:
+		region_colors[0][0] = colors_dict["inactive"]
+		flag = 0
+	
+	draw.updatePolygons(region_colors, n_cells_x, n_cells_y)
 	draw.updateCamera()
-	draw.updateScene(n_cells_x, n_cells_y, n_cells_z)
+	draw.updateScene(n_cells_x, n_cells_y)
 
 def main():
-	global n_cells_x, n_cells_y, n_cells_z
+	global n_cells_x, n_cells_y
 	
 	# Initialize opengl drawing
 	draw.initGL()
 	glutDisplayFunc(loop) # Register the drawing function with glut
 	glutIdleFunc(loop)    # When doing nothing redraw scene
-	draw.initDrawPolygons(n_cells_x, n_cells_y, n_cells_z)
 	draw.initShaders()
 	draw.initCamera()
+	draw.initPolygons(n_cells_x, n_cells_y)
 	draw.initVBOs()
 	draw.runMainGLLoop()
 
