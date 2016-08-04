@@ -25,7 +25,7 @@ ortho_matrix = None
 view_matrix  = None
 view_x = -4.0
 view_y = 0.0
-view_z = 1.0
+view_z = 2.0
 VIEW_SPEED = 0.5
 
 # Polygon global variables
