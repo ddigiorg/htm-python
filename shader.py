@@ -11,9 +11,9 @@ from OpenGL.GL import *
 VertexShader = """
 #version 130
 
-in vec2 templateVS;
-in vec2 positionVS;
-in vec3 colorVS_in;
+in vec2 templateVS; //xy
+in vec2 positionVS; //xy
+in vec3 colorVS;    //rgb
 
 out vec3 colorVS_out;
 
@@ -25,7 +25,7 @@ void main()
 	vec2 vertex_position = templateVS.xy + positionVS.xy;
 	gl_Position = projection * view * vec4(vertex_position, 0.0f, 1.0f);
 
-	colorVS_out = colorVS_in;
+	colorVS_out = colorVS;
 }
 """
 

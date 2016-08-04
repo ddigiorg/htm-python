@@ -60,7 +60,7 @@ def loop():
 		flag = 0
 	
 	draw.updatePolygons(region_colors, n_cells_x, n_cells_y)
-	draw.updateCamera()
+	draw.updateView()
 	draw.updateScene(n_cells_x, n_cells_y)
 
 def main():
@@ -71,7 +71,7 @@ def main():
 	glutDisplayFunc(loop) # Register the drawing function with glut
 	glutIdleFunc(loop)    # When doing nothing redraw scene
 	draw.initShaders()
-	draw.initCamera()
+	draw.initView()
 	draw.initPolygons(n_cells_x, n_cells_y)
 	draw.initVBOs()
 	draw.runMainGLLoop()
