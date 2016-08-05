@@ -58,9 +58,9 @@ class Layer3b(object):
 		# Active column addresses are the indices of maximum values in overlap list
 		self.ac_addresses = np.zeros(self.num_active_columns, dtype=np.int8)
 		for i in range(self.num_active_columns):
-			ac = np.argmax(overlap)
-			self.ac[i] = ac
-			overlap[ac] = 0
+			ac_address = np.argmax(overlap)
+			self.ac_addresses[i] = ac_address
+			overlap[ac_address] = 0
 
 		return self.ac_addresses
 

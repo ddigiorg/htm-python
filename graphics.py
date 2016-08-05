@@ -1,4 +1,4 @@
-# draw.py
+# graphics.py
 
 #MAKE THIS ENTIRE CODE A CLASS INSTEAD OF USING GLOBAL VARIABLES
 
@@ -37,7 +37,6 @@ position_buffer  = None
 color_buffer     = None
 template_data    = None
 position_data    = None
-color_data       = None
 VERTEX_SIZE      = 2 # xy value per vertex for template
 POSITION_SIZE    = 2 # xy value per vertex for position
 COLOR_SIZE       = 3 # rgb value per vertex for color
@@ -45,7 +44,7 @@ COLOR_SIZE       = 3 # rgb value per vertex for color
 # Keyboard global variables
 ESCAPE = '\x1b'
 
-def initGL():
+def gInit():
 	global windowID
 
 	glutInit()								# Initialize opengl
@@ -53,12 +52,12 @@ def initGL():
 	glutInitWindowSize(width, height)		# Initialize windowID size
 	glutInitWindowPosition(0, 0)			# Application windowID placed at upper left corner of monitor screen
 	windowID = glutCreateWindow("HTM")		# Create windowID with name "HTM"
-	glutKeyboardFunc(keyPressed)			# Register function when keyboard pressed
-	glutSpecialFunc(keyPressed)				# Register function when keyboard pressed
+	glutKeyboardFunc(gKeyPressed)			# Register function when keyboard pressed
+	glutSpecialFunc(gKeyPressed)				# Register function when keyboard pressed
 	glClearColor(0.0, 0.0, 0.0, 1.0)		# Black background
 
 
-def initShaders():
+def gInitShaders():
 	global shaders_programID, shaders_template_loc, shaders_position_loc, shaders_color_loc, shaders_projection_loc, shaders_view_loc
 
 	vertex_shader   = shader.compile_shader("VS")
@@ -72,7 +71,7 @@ def initShaders():
 	shaders_view_loc       = glGetUniformLocation(shaders_programID, "view" )
 
 
-def initView():
+def gInitView():
 	global width, height, ortho_matrix
 
 	l = 0.0
@@ -88,7 +87,7 @@ def initView():
                     -(r+l)/(r-l), -(t+b)/(t-b), -(f+n)/(f-n), 1.0]
 
 
-def initPolygons(n_polys_x, n_polys_y):
+def gInitPolygons(n_polys_x, n_polys_y):
 	global template_data, position_data
 
 	n_polys = n_polys_x * n_polys_y
@@ -102,20 +101,20 @@ def initPolygons(n_polys_x, n_polys_y):
 		-0.5,  0.5, 
 		 0.5, -0.5]
 
-	position_list = [0] * n_polys * POSITION_SIZE
-	
-	i = 0
-	for y in range(n_polys_y):
-		for x in range(n_polys_x):	
-			position_list[i*POSITION_SIZE  ] = 0.0 + x * (1.0 + POLY_SPACING) # vertex x world position
-			position_list[i*POSITION_SIZE+1] = 0.0 + y * (1.0 + POLY_SPACING) # vertex y world position
-			i += 1
-
+#	position_list = [0] * n_polys * POSITION_SIZE
+#	
+#	i = 0
+#	for x in range(n_polys_x):
+#		for y in range(n_polys_y):	
+#			position_list[i*POSITION_SIZE  ] = 0.0 + x * (1.0 + POLY_SPACING) # vertex x world position
+#			position_list[i*POSITION_SIZE+1] = 0.0 + y * (1.0 + POLY_SPACING) # vertex y world position
+#			i += 1
+#
 	template_data = np.array(template_list, dtype=np.float16)
-	position_data = np.array(position_list, dtype=np.float16)
+#	position_data = np.array(position_list, dtype=np.float16)
 
 
-def initVBOs():
+def gInitVBOs():
 	global template_buffer, position_buffer, color_buffer, template_data, position_data
 	global shaders_programID, shaders_template_loc, shaders_position_loc
    
@@ -129,20 +128,18 @@ def initVBOs():
 	glEnableVertexAttribArray(shaders_template_loc)
 	glVertexAttribPointer(shaders_template_loc, VERTEX_SIZE, GL_HALF_FLOAT, False, 0, None)
 
-	# Opengl VBO cell position buffer created, bound, and filled with cell position data, and updated
+	# Opengl VBO polygon position buffer created, bound, and left empty
 	position_buffer = glGenBuffers(1)
 	glBindBuffer(GL_ARRAY_BUFFER, position_buffer)
-	glBufferData(GL_ARRAY_BUFFER, position_data, GL_STATIC_DRAW)
-	glEnableVertexAttribArray(shaders_position_loc)
-	glVertexAttribPointer(shaders_position_loc, POSITION_SIZE, GL_HALF_FLOAT, False, 0, None)
+	glBufferData(GL_ARRAY_BUFFER, None, GL_STATIC_DRAW)
 
-	# Opengl VBO cell color buffer created, bound, and left empty
+	# Opengl VBO polygon color buffer created, bound, and left empty
 	color_buffer = glGenBuffers(1)
 	glBindBuffer(GL_ARRAY_BUFFER, color_buffer)
 	glBufferData(GL_ARRAY_BUFFER, None, GL_STREAM_DRAW)
 
 
-def updateView():
+def gUpdateView():
 	global view_matrix
 
 	view_matrix = [1.0,    0.0,    0.0,    0.0,
@@ -150,36 +147,53 @@ def updateView():
 				   0.0,    0.0,    1.0,    0.0,
 				   view_x, view_y, view_z, 1.0]
 
+def gUpdatePolygonPositions(in_positions):
+	n_polys_x = len(in_positions)
+	n_polys_y = len(in_positions[0])
 
-def updatePolygons(array_3d, n_polys_x, n_polys_y):
-	global color_data
+	position_list = [0] * n_polys_x * n_polys_y * POSITION_SIZE
+	
+	i = 0
+	for x in range(n_polys_x):
+		for y in range(n_polys_y):	
+			position_list[i*POSITION_SIZE  ] = in_positions[x][y][0] # polygon x world position
+			position_list[i*POSITION_SIZE+1] = in_positions[x][y][1] # polygon y world position
+			i += 1
 
-	n_polys = n_polys_x * n_polys_y
-	color_list = [0] * n_polys * COLOR_SIZE
+	position_data = np.array(position_list, dtype=np.float16)
+
+	# Opengl VBO polygon position buffer bound, and filled with cell position data, and updated
+	glBindBuffer(GL_ARRAY_BUFFER, position_buffer)
+	glBufferData(GL_ARRAY_BUFFER, position_data, GL_STATIC_DRAW)
+	glEnableVertexAttribArray(shaders_position_loc)
+	glVertexAttribPointer(shaders_position_loc, POSITION_SIZE, GL_HALF_FLOAT, False, 0, None)
+
+
+def gUpdatePolygonColors(in_colors):
+	n_polys_x = len(in_colors)
+	n_polys_y = len(in_colors[0])
+
+	color_list = [0] * n_polys_x * n_polys_y * COLOR_SIZE
 
 	i = 0
-	for y in range(n_polys_y):
-		for x in range(n_polys_x):	
-			color_list[i*COLOR_SIZE  ] = array_3d[x][y][0] # vertex r color
-			color_list[i*COLOR_SIZE+1] = array_3d[x][y][1] # vertex g color
-			color_list[i*COLOR_SIZE+2] = array_3d[x][y][2] # vertex b color
+	for x in range(n_polys_x):
+		for y in range(n_polys_y):	
+			color_list[i*COLOR_SIZE  ] = in_colors[x][y][0] # polygon r color
+			color_list[i*COLOR_SIZE+1] = in_colors[x][y][1] # polygon g color
+			color_list[i*COLOR_SIZE+2] = in_colors[x][y][2] # polygon b color
 			i += 1
 	
 	color_data = np.array(color_list, dtype=np.float16)
-
-
-def updateScene(n_polys_x, n_polys_y):
-	global color_buffer, color_data
-	global shaders_programID, shaders_color_loc, shaders_projection_loc, shaders_view_loc
-	global ortho_matrix, view_matrix
-
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
 	# Opengl VBO cell color buffer bound, filled with data, and shader variable updated
 	glBindBuffer(GL_ARRAY_BUFFER, color_buffer)
 	glBufferData(GL_ARRAY_BUFFER, color_data, GL_STREAM_DRAW)
 	glEnableVertexAttribArray(shaders_color_loc)
 	glVertexAttribPointer(shaders_color_loc, COLOR_SIZE, GL_HALF_FLOAT, True, 0, None) # normalized for unsigned char
+
+
+def gUpdateScene(n_polys_x, n_polys_y):
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
 	# Update shader with orthographic and view matrix
 	glUniformMatrix4fv(shaders_projection_loc, 1, False, ortho_matrix)
@@ -197,10 +211,10 @@ def updateScene(n_polys_x, n_polys_y):
 	# Flush the opengl rendering pipeline	
 	glutSwapBuffers()	
 
-def keyPressed(key, x, y):
+def gKeyPressed(key, x, y):
 	global view_x, view_y, view_z 
 	if key == ESCAPE.encode():
-		cleanup()
+		gCleanup()
 	if key == 'a'.encode():
 		view_x += VIEW_SPEED
 	if key == 'd'.encode():
@@ -215,7 +229,7 @@ def keyPressed(key, x, y):
 		view_z -= VIEW_SPEED
 	glutPostRedisplay()
 
-def cleanup():
+def gCleanup():
 	global windowID
 	global template_buffer, position_buffer, color_buffer
 	global shaders_programID, shaders_template_loc, shaders_position_loc
@@ -231,5 +245,5 @@ def cleanup():
 	glutDestroyWindow(windowID)
 	exit(0)
 
-def runMainGLLoop():
+def gRunMainGLLoop():
 	glutMainLoop() # Start event processing engine
