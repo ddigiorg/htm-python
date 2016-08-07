@@ -7,66 +7,55 @@ import numpy as np
 # ps means proximal synapse
 # bs means basal synapse
 
-class Layer3b(object):
-
-	s_threshold = 20
+"""MAYBE PUT PROXIMAL SYNAPSE SPECIFIC LEARNING HERE"""
+class Column(object):
 	ps_connectivity = 0.5
+	ps_threshold = 20
 
-	"""CLEAN THIS UP"""
-	def __init__(self, num_inputs, num_columns, num_neurons):
+	def __init__(self, num_inputs):
 
-		# L3b shape data variables
-		self.num_columns   = num_columns
-		self.num_neurons   = num_neurons
 		self.num_psynapses = int(num_inputs * self.ps_connectivity)
 
-		# L3b state data variables
-		self.c_active_addresses  = []
-		self.n_active_addresses  = []
-		self.n_predict_addresses = []
-		self.n_learn_addresses   = []
+		self.ps_addresses   = np.random.choice(num_inputs, num_inputs * self.ps_connectivity, replace=False)
+		self.ps_permanences = np.random.random_integers(self.ps_threshold, self.ps_threshold + 1, self.num_psynapses)
 
-		# L3b proximal synapse data variables
-		self.ps_addresses = np.zeros( (num_columns, self.num_psynapses), dtype=np.int8)		
-		for c in range(num_columns):
-			self.ps_addresses[c] = np.random.choice(num_inputs, num_inputs * self.ps_connectivity, replace=False)
-		self.ps_permanences = np.random.random_integers(self.s_threshold, self.s_threshold + 1, (num_columns, self.num_psynapses) )
+"""MAYBE PUT BASAL SYNAPSE SPECIFIC LEARNING HERE"""
+class Neuron(object):
+	bs_threshold = 20
+	num_new_synapses = 4
 
-		# L3b basal synapse data variables
-		self.bs_addresses   = np.empty([num_columns, num_neurons], dtype=object)
-		self.bs_permanences = np.empty([num_columns, num_neurons], dtype=object)
+	def __init__(self):
+		self.previous_active_state  = False
+		self.previous_predict_state = False
+		self.previous_learn_state   = False
 
-		print(np.array(self.bs_addresses))
+		self.active_state  = False
+		self.predict_state = False
+		self.learn_state   = False
+
+		self.bs_addresses   = []
+		self.bs_permanences = []
+
+
+class Layer3b(object):
+	def __init__(self, num_inputs, num_columns, num_neurons):
+		self.columns = [Column(num_inputs) for c in range(num_columns)]
+		self.neurons = [[Neuron() for n in range(num_neurons)] for c in range(num_columns)]
+
+		self.c_active_addresses = []
 
 	def runSpatialPooler(self, inputs):
-		self.c_active_addresses = SpatialPooler(inputs, self.ps_addresses, self.ps_permanences, self.s_threshold)
-
-#		print(self.ps_permanences[self.c_active_addresses])
+		self.c_active_addresses = SpatialPooler(inputs, self.columns)
 
 	def runTemporalMemory(self):
-		self.n_active_addresses = TemporalMemory(self.num_columns,
-                                                 self.num_neurons, 
-                                                 self.bs_addresses,
-                                                 self.bs_permanences,
-                                                 self.c_active_addresses, 
-                                                 self.n_active_addresses, 
-                                                 self.n_predict_addresses,
-                                                 self.n_learn_addresses)
+		TemporalMemory(self.neurons, self.c_active_addresses)
 
-#		print(self.n_active_addresses)
-
-
-	def getActiveColumnAddresses(self):
-		return self.c_active_addresses
-
-	def getActiveNeuronAddresses(self):
-		return self.n_active_addresses
 
 """CLEAN THIS UP"""
-def SpatialPooler(input_axons, ps_addresses, ps_permanences, s_threshold):
-
-	num_columns   = len(ps_addresses)
-	num_psynapses = len(ps_addresses[0])
+def SpatialPooler(input_axons, columns):
+	num_columns   = len(columns)
+	num_psynapses = columns[0].num_psynapses
+	ps_threshold  = columns[0].ps_threshold
 
 	c_active_percent = 0.02
 	num_c_active = np.int16( np.ceil( num_columns * c_active_percent ) )
@@ -78,8 +67,8 @@ def SpatialPooler(input_axons, ps_addresses, ps_permanences, s_threshold):
 	overlap = [0] * num_columns
 	for c in range(num_columns):
 		for s in range(num_psynapses):
-			if ps_permanences[c, s] > s_threshold:
-				overlap[c] = overlap[c] + input_axons[ps_addresses[c, s]]
+			if columns[c].ps_permanences[s] > ps_threshold:
+				overlap[c] = overlap[c] + input_axons[columns[c].ps_addresses[s]]
 
 	# Inhibiion
 	# Active column addresses are the indices of maximum values in overlap list
@@ -91,27 +80,30 @@ def SpatialPooler(input_axons, ps_addresses, ps_permanences, s_threshold):
 
 	# Learning
 	for ac in c_active_addresses:
-		adaptSynapses(input_axons, [ps_addresses[ac]], [ps_permanences[ac]], s_threshold)
+		adaptSynapses(input_axons, [columns[ac].ps_addresses], [columns[ac].ps_permanences], ps_threshold)
 
 	return c_active_addresses
 
 
-def TemporalMemory(num_columns,
-                   num_neurons,
-                   bs_addresses,
-                   bs_permanences,
-                   c_active_addresses,
-                   n_active_addresses,
-                   n_predict_addresses,
-                   n_learn_addresses):
+def TemporalMemory(neurons, c_active_addresses):
+	num_columns = len(neurons)
+	num_neurons = len(neurons[0])
+	num_new_synapses = neurons[0][0].num_new_synapses
 
-	n_previous_active_addresses  = n_active_addresses
-	n_previous_predict_addresses = n_predict_addresses
-	n_previous_learn_addresses   = n_learn_addresses
+	n_previous_active_addresses = []
 
-	n_active_addresses  = []
-	n_predict_addresses = []
-	n_learn_addresses   = []
+	for c in range(num_columns):
+		for n in range(num_neurons):
+			neurons[c][n].previous_active_state  = neurons[c][n].active_state
+			neurons[c][n].previous_predict_state = neurons[c][n].predict_state
+			neurons[c][n].previous_learn_state   = neurons[c][n].learn_state
+
+			if neurons[c][n].previous_active_state == True:
+				n_previous_active_addresses.append([c, n])
+
+			neurons[c][n].active_state  = False
+			neurons[c][n].predict_state = False
+			neurons[c][n].learn_state   = False
 
 	# Determine neurons' active state
 	for ac in c_active_addresses:
@@ -119,39 +111,39 @@ def TemporalMemory(num_columns,
 		n_learn_chosen = False
 
 		for n in range(num_neurons):
-			if [ac, n] in n_previous_predict_addresses:
+			if neurons[ac][n].previous_predict_state == True:
 				pattern_recognized = True
-				n_active_addresses.append([ac, n])
-				
+				neurons[ac][n].active_state = True
+				n_learn_chosen = True #!!!
 
 		if pattern_recognized == False:
 			for n in range(num_neurons):
-				n_active_addresses.append([ac, n])
+				neurons[ac][n].active_state = True
 
 		if n_learn_chosen == False:
+			n_previous_active_addresses.append([0, 0]) #!!!
 			n_learn = 0
-			n_learn_addresses.append([ac, n_learn])
-#			print(bs_addresses[ac][n_learn])
-#			print(n_previous_active_addresses)
-#			bs_addresses[ac][n_learn].append(n_previous_active_addresses)
-#			bs_permanences
+			neurons[ac][n_learn].learn_state = True
+			neurons[ac][n_learn].bs_addresses.append(n_previous_active_addresses)
+			neurons[ac][n_learn].bs_permanences = [21]*num_new_synapses
 
-#	print(np.array(bs_addresses))
+		neurons[ac][0].predict_state = True #!!!
+		print(neurons[ac][0].bs_addresses)
+		print(neurons[ac][0].bs_permanences)
 
 	# Determine neurons' predict state
 #	for c in range(num_columns):
 #		for n in range (num_neurons):
-#			if
+#			if neurons[c][n].bs_addresses
 #				n_predict_addresses.append([c, n])
 
 
 	# Learning
 
-	return n_active_addresses
-
 
 """CLEAN THIS"""
 """MAKE MORE EFFICIENT"""
+"""MAYBE PUT IN COLUMN AND LAYER CLASSES INSTEAD?"""
 def adaptSynapses(axons, d_s_addresses, d_s_permanences, s_threshold):
 	s_learning_rate = 1
 	s_permanence_lower = 0

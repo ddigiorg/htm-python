@@ -58,18 +58,18 @@ def loop():
 		flag = 0
 
 	layer3b.runSpatialPooler(l3b_inputs)
-	active_columns = layer3b.getActiveColumnAddresses()
 	layer3b.runTemporalMemory()
-	active_neurons = layer3b.getActiveNeuronAddresses()
 
 	for i in range(num_inputs):
 		if l3b_inputs[i] == 1:
 			index = i * 3
 			in_colors[index:index+3] = colors_dict["active"]
 
-	for c, n in active_neurons:
-		index = (c * num_neurons + n) * 3
-		l3b_colors[index:index+3] = colors_dict["active"]
+	for c in range(num_columns):
+		for n in range(num_neurons):
+			if layer3b.neurons[c][n].active_state == True:
+				index = (c * num_neurons + n) * 3
+				l3b_colors[index:index+3] = colors_dict["active"]
 
 	region_colors = np.concatenate( (in_colors, l3b_colors), axis=0 )
 
