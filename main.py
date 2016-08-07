@@ -9,11 +9,16 @@ from OpenGL.GLU import *
 import numpy as np
 import random as rand
 import graphics as g
-import layers as l
-import spatial_pooler as sp
+import htm as htm
+
+import time
+
+colors_dict = {"inactive": [0.5, 0.5, 0.5], # Neuron inactive state
+               "active":   [0.0, 1.0, 0.0], # Neuron active (feed forward)
+               "predict":  [1.0, 0.0, 1.0]} # Neuron predictive state
 
 # Cortex Global Variables
-num_columns   = 8  # Number of columns per region
+num_columns   = 20 # Number of columns per region
 num_neurons   = 4  # Number of neurons per column
 num_dendrites = 10 # Number of dendrites per neuron
 num_synapses  = 5  # Number of synapses per dendrite
@@ -24,67 +29,77 @@ inputs = [None] * 2
 for i in range(2):
 	inputs[i] = [0] * num_inputs
 for i in range(5):
-	inputs[0][i] = 1
-	inputs[1][i] = 1
-
-layer3b = l.Layer3b(num_inputs, num_columns, num_neurons)
-active_columns = layer3b.runSpatialPooler(inputs[0])
-print(active_columns)
-
-# neuron positions for graphics
-NEURON_SPACING = 0.5
-
-n_in_positions  = np.array( [0.0, 0.0] * num_inputs, dtype=np.float16)
-n_l3b_positions = np.array( [ [0.0, 0.0] ] * num_neurons * num_columns, dtype=np.float16)
-
-print(n_l3b_positions)
-
-#for i in range(num_inputs):
-#	n_in_positions[i] = [0.0 + i * (1.0 + NEURON_SPACING), # x world position
- #                        0.0                             ] # y world position
-
-for c in range(num_columns):
-	for n in range(num_neurons):
-		n_l3b_positions[c+n][0] = 0.0 + c * (1.0 + NEURON_SPACING) # x world position
-		n_l3b_positions[c+n][1] = 2.0 + n * (1.0 + NEURON_SPACING) # y world position
-
-print(n_l3b_positions)
-
-# neuron colors for graphics
-colors_dict = {"inactive": [0.5, 0.5, 0.5], # Neuron inactive state
-			   "active":   [0.0, 1.0, 0.0], # Neuron active (feed forward)
-			   "predict":  [1.0, 0.0, 1.0]} # Neuron predictive state
-
-neuron_colors = np.array([ [ colors_dict["inactive"] ]*num_neurons ]*num_columns, dtype=np.float16)
+	inputs[0][ i  ] = 1
+	inputs[1][-i-1] = 1
 
 flag = 0
 
+in_colors  = None
+l3b_colors = None
+region_colors = None
+active_columns = None
+
+layer3b = htm.Layer3b(num_inputs, num_columns, num_neurons)
+
 def loop():
 	global flag
+	global region_colors
 
-	if flag == 0: 
-		for ac in active_columns:
-			for n in range(num_neurons):
-				neuron_colors[ac][n] = colors_dict["active"]
-		flag = 1
+	# reset all neuron color data to inactive
+	in_colors  = np.full(num_inputs * 3, 0.5, dtype=np.float16)
+	l3b_colors = np.full(num_columns * num_neurons * 3, 0.5, dtype=np.float16)
 
-#	else:
-#		cell_colors[0][0] = colors_dict["inactive"]
-#		flag = 0
-	
-	g.gUpdatePolygonColors(neuron_colors)
+	l3b_inputs = []
+	if flag == 0:
+		l3b_inputs = inputs[0]
+#		flag = 1
+	else:
+		l3b_inputs = inputs[1]
+		flag = 0
+
+	layer3b.runSpatialPooler(l3b_inputs)
+	active_columns = layer3b.getActiveColumnAddresses()
+	layer3b.runTemporalMemory()
+	active_neurons = layer3b.getActiveNeuronAddresses()
+
+	for i in range(num_inputs):
+		if l3b_inputs[i] == 1:
+			index = i * 3
+			in_colors[index:index+3] = colors_dict["active"]
+
+	for c, n in active_neurons:
+		index = (c * num_neurons + n) * 3
+		l3b_colors[index:index+3] = colors_dict["active"]
+
+	region_colors = np.concatenate( (in_colors, l3b_colors), axis=0 )
+
+	g.gUpdatePolygonColors(region_colors)
 	g.gUpdateView()
-	g.gUpdateScene(num_columns, num_neurons)
+	g.gUpdateScene(num_inputs + num_columns * num_neurons)
+
+	time.sleep(1.0)
 
 def main():
+	global in_colors, l3b_colors
+	global active_columns
+
+#	layer3b = htm.Layer3b(num_inputs, num_columns, num_neurons)
+#	layer3b.runSpatialPooler(inputs[0])
+#	active_columns = layer3b.getActiveColumnAddresses()
+#	print(active_columns)
+
+	in_positions, l3b_positions, in_colors, l3b_colors = g.gInitNeuronGraphicsData(num_inputs, num_columns, num_neurons)
+
+	region_positions = np.concatenate( (in_positions, l3b_positions), axis=0 )
+
 	g.gInit()
-	glutDisplayFunc(loop) # Register the ging function with glut
-	glutIdleFunc(loop)    # When doing nothing reg scene
+	glutDisplayFunc(loop)
+	glutIdleFunc(loop)
 	g.gInitShaders()
 	g.gInitView()
-	g.gInitPolygons(num_columns, num_neurons)
 	g.gInitVBOs()
-	g.gUpdatePolygonPositions(n_l3b_positions)
+	g.gUpdatePolygonTemplate()
+	g.gUpdatePolygonPositions(region_positions)
 	g.gRunMainGLLoop()
 
 main()
