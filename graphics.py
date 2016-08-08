@@ -19,6 +19,7 @@ shaders_view_loc       = None
 shaders_template_loc   = None
 shaders_position_loc   = None
 shaders_color_loc      = None
+shaders_scale_loc      = None
 
 # View global variables
 ortho_matrix = None
@@ -79,15 +80,16 @@ def gInit():
 
 
 def gInitShaders():
-	global shaders_programID, shaders_template_loc, shaders_position_loc, shaders_color_loc, shaders_projection_loc, shaders_view_loc
+	global shaders_programID, shaders_template_loc, shaders_position_loc, shaders_color_loc, shaders_scale_loc, shaders_projection_loc, shaders_view_loc
 
 	vertex_shader   = shader.compile_shader("VS")
 	fragment_shader = shader.compile_shader("FS")
 	shaders_programID = shader.link_shader_program(vertex_shader, fragment_shader)     
 
-	shaders_template_loc   = glGetAttribLocation(shaders_programID, "templateVS")
-	shaders_position_loc   = glGetAttribLocation(shaders_programID, "positionVS")
-	shaders_color_loc      = glGetAttribLocation(shaders_programID, "colorVS")
+	shaders_template_loc   = glGetAttribLocation(shaders_programID, "polygon_template")
+	shaders_position_loc   = glGetAttribLocation(shaders_programID, "polygon_position")
+	shaders_color_loc      = glGetAttribLocation(shaders_programID, "polygon_color")
+	shaders_scale_loc      = glGetUniformLocation(shaders_programID, "polygon_scale")
 	shaders_projection_loc = glGetUniformLocation(shaders_programID, "projection")
 	shaders_view_loc       = glGetUniformLocation(shaders_programID, "view" )
 
@@ -141,6 +143,7 @@ def gUpdateView():
 def gUpdatePolygonTemplate():
 	# Vertex locations for square polygon template
 	template_list = [-0.5,  0.5, -0.5, -0.5, 0.5, -0.5, 0.5,  0.5, -0.5,  0.5, 0.5, -0.5]
+#	template_list = [-0.0,  0.0] # For GL_POINTS
 	template_data = np.array(template_list, dtype=np.float16)
 
 	# Opengl VBO polygon template buffer bound, filled with data, and shader variable updated
@@ -169,6 +172,8 @@ def gUpdatePolygonColors(color_data):
 def gUpdateScene(num_polys):
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
+	glUniform1f(shaders_scale_loc, 1.0)
+
 	# Update shader with orthographic and view matrix
 	glUniformMatrix4fv(shaders_projection_loc, 1, False, ortho_matrix)
 	glUniformMatrix4fv(shaders_view_loc, 1, False, view_matrix)
@@ -180,7 +185,12 @@ def gUpdateScene(num_polys):
 
 	# Draw cells
 	glDrawArraysInstanced(GL_TRIANGLES, 0, 6*2, num_polys) # 6 vertices per triangle, 2 triangles per square 
-	
+#	glDrawArraysInstanced(GL_POINTS, 0, 1, num_polys) 
+
+#	glUniform1f(shaders_scale_loc, 2.0)
+#	glDrawArraysInstanced(GL_TRIANGLES, 0, 6*2, num_polys) # 6 vertices per triangle, 2 triangles per square 
+
+
 	# Flush the opengl rendering pipeline	
 	glutSwapBuffers()	
 

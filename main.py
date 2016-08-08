@@ -18,8 +18,8 @@ colors_dict = {"inactive": [0.5, 0.5, 0.5], # Neuron inactive state
                "predict":  [1.0, 0.0, 1.0]} # Neuron predictive state
 
 # Cortex Global Variables
-num_columns   = 20 # Number of columns per region
-num_neurons   = 4  # Number of neurons per column
+num_columns   = 1024 # Number of columns per region
+num_neurons   = 8  # Number of neurons per column
 num_dendrites = 10 # Number of dendrites per neuron
 num_synapses  = 5  # Number of synapses per dendrite
 
@@ -52,7 +52,7 @@ def loop():
 	l3b_inputs = []
 	if flag == 0:
 		l3b_inputs = inputs[0]
-#		flag = 1
+		flag = 1
 	else:
 		l3b_inputs = inputs[1]
 		flag = 0
@@ -67,17 +67,21 @@ def loop():
 
 	for c in range(num_columns):
 		for n in range(num_neurons):
+			if layer3b.neurons[c][n].predict_state == True:
+				index = (c * num_neurons + n) * 3
+				l3b_colors[index:index+3] = colors_dict["predict"]
 			if layer3b.neurons[c][n].active_state == True:
 				index = (c * num_neurons + n) * 3
 				l3b_colors[index:index+3] = colors_dict["active"]
+			
 
 	region_colors = np.concatenate( (in_colors, l3b_colors), axis=0 )
 
 	g.gUpdatePolygonColors(region_colors)
 	g.gUpdateView()
-	g.gUpdateScene(num_inputs + num_columns * num_neurons)
+	g.gUpdateScene( int(len(region_colors)/3) )
 
-	time.sleep(1.0)
+#	time.sleep(1.0)
 
 def main():
 	global in_colors, l3b_colors

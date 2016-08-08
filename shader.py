@@ -11,21 +11,23 @@ from OpenGL.GL import *
 VertexShader = """
 #version 130
 
-in vec2 templateVS; //xy
-in vec2 positionVS; //xy
-in vec3 colorVS;    //rgb
+in vec2 polygon_template; //xy
+in vec2 polygon_position; //xy
+in vec3 polygon_color;    //rgb
 
-out vec3 colorVS_out;
+out vec3 colorVS;
 
+uniform float polygon_scale;
 uniform mat4 projection;
 uniform mat4 view;
 
 void main()
 {
-	vec2 vertex_position = templateVS.xy + positionVS.xy;
+	vec2 vertex_position = polygon_template.xy + polygon_position.xy;
+	vertex_position *= polygon_scale;
 	gl_Position = projection * view * vec4(vertex_position, 0.0f, 1.0f);
 
-	colorVS_out = colorVS;
+	colorVS = polygon_color;
 }
 """
 
@@ -33,13 +35,13 @@ void main()
 FragmentShader = """
 #version 130
 
-in vec3 colorVS_out;
+in vec3 colorVS;
 
-out vec3 colorFS_out;
+out vec3 colorFS;
 
 void main()
 {
-	colorFS_out = colorVS_out;
+	colorFS = colorVS;
 }
 """
 
