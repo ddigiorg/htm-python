@@ -15,11 +15,36 @@ class Layer3b(object):
 
 		self.c_active_addresses = []
 
+		self.n_previous_active_addresses  = []
+		self.n_previous_predict_addresses = []
+		self.n_previous_learn_addresses   = []
+
+		self.n_active_addresses  = []
+		self.n_predict_addresses = []
+		self.n_learn_addresses   = []
+
+
 	def runSpatialPooler(self, inputs):
 		self.c_active_addresses = SpatialPooler(inputs, self.columns)
 
 	def runTemporalMemory(self):
-		TemporalMemory(self.c_active_addresses, self.neurons)
+
+		self.n_previous_active_addresses  = self.n_active_addresses
+		self.n_previous_predict_addresses = self.n_predict_addresses
+		self.n_previous_learn_addresses   = self.n_learn_addresses
+
+		self.n_active_addresses  = []
+		self.n_predict_addresses = []
+		self.n_learn_addresses   = []
+
+		(self.n_active_addresses, 
+         self.n_predict_addresses, 
+         self.n_learn_addresses)  = TemporalMemory(
+            self.c_active_addresses, 
+            self.neurons, 
+            self.n_previous_active_addresses,
+            self.n_previous_predict_addresses,
+            self.n_previous_learn_addresses)
 
 
 class Column(object):
@@ -30,9 +55,7 @@ class Column(object):
 	ps_permanence_upper = 99
 
 	def __init__(self, num_inputs):
-
 		self.num_psynapses = int(num_inputs * self.ps_connectivity)
-
 		self.ps_addresses   = np.random.choice(num_inputs, num_inputs * self.ps_connectivity, replace=False)
 		self.ps_permanences = np.random.random_integers(self.ps_threshold, self.ps_threshold + 1, self.num_psynapses)
 
@@ -60,7 +83,6 @@ class Column(object):
 
 
 class Neuron(object):
-	num_new_synapses = 4
 	bs_threshold = 20
 	bs_learning_rate = 1
 	bs_permanence_lower = 0
@@ -69,37 +91,32 @@ class Neuron(object):
 	"""CHOOSE BETTER NAME"""
 	bs_threshold2 = 1
 
+	"""DETERMINE BETTER WAY OF INITIALIZING THIS"""
+	num_new_synapses = 4
+
 	def __init__(self):
-		self.previous_active_state  = False
-		self.previous_predict_state = False
-		self.previous_learn_state   = False
-
-		self.active_state  = False
-		self.predict_state = False
-		self.learn_state   = False
-
 		self.bs_addresses   = []
 		self.bs_permanences = []
 
-	def segmentActive(self, neurons, d):
-		num_neurons = len(neurons[0])
-
+	def segmentActive(self, n_active_addresses, d):
 		overlap = 0
-		for address in self.bs_addresses[d]:
-			c = int(address / num_neurons)
-			n = int(address % num_neurons)
-			overlap +=	neurons[c][n].active_state 
+		for bs_address in self.bs_addresses[d]:
+			c = bs_address[0]
+			n = bs_address[1]
+			if [c, n] in n_active_addresses:
+				overlap += 1
 
 		if overlap >= self.bs_threshold2:
 			return True
 
 	def addDendriteSegment(self, n_previous_active_addresses):
 		self.bs_addresses.append(n_previous_active_addresses)
-		self.bs_permanences = [self.bs_threshold + 1] * self.num_new_synapses
+		self.bs_permanences = [self.bs_threshold + 1] * len(n_previous_active_addresses)
 
 	def adaptSynapses(self):
 		print(1)
 
+"""CONSIDER MAKING THIS A CLASS?"""
 """CLEAN THIS UP"""
 def SpatialPooler(axons, columns):
 	num_columns   = len(columns)
@@ -108,6 +125,7 @@ def SpatialPooler(axons, columns):
 
 	c_active_percent = 0.02
 	num_c_active = np.int16( np.ceil( num_columns * c_active_percent ) )
+	c_active_addresses = []
 
 	# Boosting
 	"""ADD BOOSTING TO SPATIAL POOLER"""
@@ -121,10 +139,9 @@ def SpatialPooler(axons, columns):
 
 	"""ADD RANDOM TIEBREAKER IF MULTIPLE OVERLAP SCORES ARE  MAX"""
 	# Inhibiion: Active column addresses are the indices of maximum values in overlap list
-	c_active_addresses = np.zeros(num_c_active, dtype=np.int8)
 	for i in range(num_c_active):
 		c_active_address = np.argmax(overlap)
-		c_active_addresses[i] = c_active_address
+		c_active_addresses.append(c_active_address)
 		overlap[c_active_address] = 0
 
 	# Learning
@@ -133,67 +150,53 @@ def SpatialPooler(axons, columns):
 
 	return c_active_addresses
 
+"""CONSIDER MAKING THIS A CLASS?"""
 n_learn = 0 #!!!
-def TemporalMemory(c_active_addresses, neurons):
+def TemporalMemory(c_active_addresses, 
+                   neurons,
+                   n_previous_active_addresses,
+                   n_previous_predict_addresses,
+                   n_previous_learn_addresses):
+
 	global n_learn #!!!
 	num_columns = len(neurons)
 	num_neurons = len(neurons[0])
-	num_new_synapses = neurons[0][0].num_new_synapses
 
-	n_previous_active_addresses = []
+	n_active_addresses  = []
+	n_predict_addresses = []
+	n_learn_addresses   = []
 
-	for c in range(num_columns):
-		for n in range(num_neurons):
-			neurons[c][n].previous_active_state  = neurons[c][n].active_state
-			neurons[c][n].previous_predict_state = neurons[c][n].predict_state
-			neurons[c][n].previous_learn_state   = neurons[c][n].learn_state
-
-			if neurons[c][n].previous_active_state == True:
-				n_previous_active_addresses.append(c * num_neurons +  n)
-
-			neurons[c][n].active_state  = False
-			neurons[c][n].predict_state = False
-			neurons[c][n].learn_state   = False
-
-	# Determine neurons' active state
+	# Determine neurons' active state and learn state
 	for ac in c_active_addresses:
 		pattern_recognized = False
 		n_learn_chosen = False
 
 		for n in range(num_neurons):
-			if neurons[ac][n].previous_predict_state == True:
+			if [ac, n] in n_previous_predict_addresses:
 				pattern_recognized = True
-				neurons[ac][n].active_state = True
+				n_active_addresses.append([ac, n])
 				n_learn_chosen = True #!!!
 
 		if pattern_recognized == False:
 			for n in range(num_neurons):
-				neurons[ac][n].active_state = True
+				n_active_addresses.append([ac, n])
 
 		if n_learn_chosen == False:
 			# Get best matching neuron
 #			for n in range(num_neurons)
 				# Get best matching segment
-
 			n_learn = np.random.random_integers(num_neurons-1)
-					
 			# continue
-			neurons[ac][n_learn].learn_state = True
-#			n_previous_active_addresses.append(0) #!!!
+			n_learn_addresses.append([ac, n_learn])
 			neurons[ac][n_learn].addDendriteSegment(n_previous_active_addresses)
-
-		neurons[ac][n_learn].predict_state = True #!!!
 
 	# Determine neurons' predict state
 	for c in range(num_columns):
 		for n in range (num_neurons):
-
-#			if neurons[c][n].active_state == True:
-#				print(neurons[c][n].bs_addresses)
-
 			for d in range(len(neurons[c][n].bs_addresses)):
-				if neurons[c][n].segmentActive(neurons, d):
-#					n_predict_addresses.append([c, n])
-					neurons[c][n].predict_state = True
+				if neurons[c][n].segmentActive(n_active_addresses, d):
+					n_predict_addresses.append([c, n])
 
 	# Learning
+
+	return (n_active_addresses, n_predict_addresses, n_learn_addresses)
