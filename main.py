@@ -3,9 +3,20 @@
 # pyopengl 3.0 Mesa 11.1.2
 # glsl 1.30
 
+"""
+TODO
+
++ Pass through code and clean up/organize
++ Rename variables to fit the new naming conventions (see htm.py)
++ Add better timing??? maybe in graphics.py?
++ Address issues and comments
+
++ Update README.md
+"""
+
 from OpenGL.GL import *
 from OpenGL.GLUT import *
-from OpenGL.GLU import *
+#from OpenGL.GLU import * # <-- uneeded so delete when finished
 import numpy as np
 import random as rand
 import graphics as g
@@ -20,8 +31,8 @@ colors_dict = {"inactive": [0.5, 0.5, 0.5], # Neuron inactive state
 # Cortex Global Variables
 num_columns   = 20 # Number of columns per region
 num_neurons   = 4  # Number of neurons per column
-num_dendrites = 10 # Number of dendrites per neuron
-num_synapses  = 5  # Number of synapses per dendrite
+#num_dendrites = 10 # Number of dendrites per neuron
+#num_synapses  = 5  # Number of synapses per dendrite
 
 # Input Setup
 num_inputs = 20
@@ -65,15 +76,13 @@ def loop():
 			index = i * 3
 			in_colors[index:index+3] = colors_dict["active"]
 
-	for c in range(num_columns):
-		for n in range(num_neurons):
-			if [c, n] in layer3b.n_predict_addresses:
-				index = (c * num_neurons + n) * 3
-				l3b_colors[index:index+3] = colors_dict["predict"]
-			if [c, n] in layer3b.n_active_addresses:
-				index = (c * num_neurons + n) * 3
-				l3b_colors[index:index+3] = colors_dict["active"]
-			
+	for n in range(num_columns * num_neurons):
+		if n in layer3b.n_predict_addresses:
+			index = n * 3
+			l3b_colors[index:index+3] = colors_dict["predict"]
+		if n in layer3b.n_active_addresses:
+			index = n * 3
+			l3b_colors[index:index+3] = colors_dict["active"]			
 
 	region_colors = np.concatenate( (in_colors, l3b_colors), axis=0 )
 
@@ -81,18 +90,16 @@ def loop():
 	g.gUpdateView()
 	g.gUpdateScene( int(len(region_colors)/3) )
 
-	time.sleep(1.0)
+	time.sleep(2.0)
 
 def main():
 	global in_colors, l3b_colors
 	global active_columns
 
-#	layer3b = htm.Layer3b(num_inputs, num_columns, num_neurons)
-#	layer3b.runSpatialPooler(inputs[0])
-#	active_columns = layer3b.getActiveColumnAddresses()
-#	print(active_columns)
-
-	in_positions, l3b_positions, in_colors, l3b_colors = g.gInitNeuronGraphicsData(num_inputs, num_columns, num_neurons)
+	(in_positions, 
+     l3b_positions, 
+     in_colors, 
+     l3b_colors) = g.gInitNeuronGraphicsData(num_inputs, num_columns, num_neurons)
 
 	region_positions = np.concatenate( (in_positions, l3b_positions), axis=0 )
 

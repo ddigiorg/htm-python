@@ -1,10 +1,19 @@
 # graphics.py
+"""
+TODO
 
-#MAKE THIS ENTIRE CODE A CLASS INSTEAD OF USING GLOBAL VARIABLES
++ Turn this code into a class to get rid of global variables: class Graphics? maybe different name...
++ Modify main after turning this into a class
++ Work on only displaying active columns in opengl window
++ Work on adding text capabilities in opengl windows
++ Work on adding mouse capabilities
++ Address issues and comments
++ Add docstring comments for class and methods
 
+"""
 from OpenGL.GL import *
 from OpenGL.GLUT import *
-from OpenGL.GLU import *
+#from OpenGL.GLU import * # <-- uneeded so delete when finished 
 import numpy as np
 import shader as shader
 
