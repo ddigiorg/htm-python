@@ -2,7 +2,7 @@
 """
 TODO
 
-+ Work on method for only displaying just active columns in opengl window
++ Work on method for only displaying active columns in opengl window
 + Work on adding text capabilities in opengl windows
 + Work on adding mouse capabilities
 + Address issues and comments

@@ -147,12 +147,31 @@ class Neuron(object):
 		self.bs_addresses.append(n_previous_addresses)
 		self.bs_permanences.append([self.BS_THRESHOLD + 1] * len(n_previous_addresses))
 
-	def adaptSynapses(self):
-		n = 0 # placeholder... delete this
-		if n in n_learn_addresses:
-			print(1) # increment
-		elif n not in n_active_addresses and n in n_prev_active_addresses:
-			print(-1) # decriment
+	def adaptSynapses(self, n, d, n_learn_addresses, n_active_addresses, n_prev_predict_addresses):
+#		if n in n_prev_learn_addresses:
+
+		s_remove = []
+		for s in range( len(self.bs_addresses[d]) ):
+			if self.bs_addresses[d][s] in n_learn_addresses and self.bs_permanences[d][s] < self.BS_PERMANENCE_UPPER: 
+				self.bs_permanences[d][s] += self.BS_LEARNING_RATE
+
+			elif self.bs_permanences[d][s] >= self.BS_PERMANENCE_LOWER:
+				self.bs_permanences[d][s] -= self.BS_LEARNING_RATE
+
+#				if self.bs_permanences[d][s] < 0:
+#					s_remove.append(s)
+
+#		for s in s_remove:
+#			del self.bs_addresses[d][s]
+#			del self.bs_permanences[d][s]
+
+
+
+#			elif self.bs_addresses[d][s] not in n_active_addresses and self.bs_addresses[d][s] in n_prev_predict_addresses:
+#				self.bs_permanences[d][s] -= 1
+
+#		elif n not in n_active_addresses and n in n_prev_predict_addresses:
+#			self.bs_permanences[d][s] -= 1
 
 
 """CONSIDER MAKING THIS A CLASS?"""
@@ -193,9 +212,9 @@ def TemporalMemory(c_size,
                    npc_size,
                    c_active_addresses, 
                    neurons,
-                   n_previous_active_addresses,
-                   n_previous_predict_addresses,
-                   n_previous_learn_addresses):
+                   n_prev_active_addresses,
+                   n_prev_predict_addresses,
+                   n_prev_learn_addresses):
 
 
 	n_size = c_size * npc_size
@@ -211,16 +230,16 @@ def TemporalMemory(c_size,
 
 		for npc in range(npc_size):
 			n = ac * npc_size + npc
-			if n in n_previous_predict_addresses:
+			if n in n_prev_predict_addresses:
 				pattern_recognized = True
 				n_active_addresses.append(n)
-				# d = neurons(n).getActiveSegment(n_previous_active_addresses)
-				# if segmentActive(d, n_previous_learn_addresses)
+				# d = neurons(n).getActiveSegment(n_prev_active_addresses)
+				# if segmentActive(d, n_prev_learn_addresses)
 				n_learn_chosen = True # tab this over -->
 				n_learn_addresses.append(n) # tab this over -->
 				print("==========")
 				print("{} bs addresses:   {}".format(n, neurons[n].bs_addresses))
-#				print("{} bs permanences: {}".format(n, neurons[n].bs_permanences))
+				print("{} bs permanences: {}".format(n, neurons[n].bs_permanences))
 
 		if pattern_recognized == False:
 			for npc in range(npc_size):
@@ -228,19 +247,25 @@ def TemporalMemory(c_size,
 				n_active_addresses.append(n)
 
 		if n_learn_chosen == False:
-			print("==========")
-			print("previous learn neuron: {}".format(n_previous_learn_addresses))
 			### Get best matching neuron ### <--put into a Neuron class method
 #			for n in range(num_neurons)
 				# Get best matching segment
 			npc_learn = np.random.random_integers(npc_size - 1)
 			n_learn = ac * npc_size + npc_learn
 			### ###
-			n_learn_addresses.append(n_learn)
-			neurons[n_learn].addDendriteSegment(n_previous_learn_addresses)
-			# ADD TO UPDATE LIST
+
+			# If there's no previous learn addresses set all neurons in the active column to learn state
+			if n_prev_learn_addresses:
+				n_learn_addresses.append(n_learn)
+			else:
+				for npc in range(npc_size):
+					n_learn_addresses.append(ac * npc_size + npc)
+	
+			neurons[n_learn].addDendriteSegment(n_prev_learn_addresses)
+			# ADAPT SYNAPSES - ADD TO UPDATE LIST
+			print("==========")
 			print("{} bs addresses:   {}".format(n_learn, neurons[n_learn].bs_addresses))
-#			print("{} bs permanences: {}".format(n_learn, neurons[n_learn].bs_permanences))
+			print("{} bs permanences: {}".format(n_learn, neurons[n_learn].bs_permanences))
 
 
 	# Determine predict state for all neurons
@@ -250,8 +275,10 @@ def TemporalMemory(c_size,
 				if neurons[n].segmentActive(d, n_active_addresses):
 					n_predict_addresses.append(n)
 					# getSegmentActiveSynapses <--lookup in notes on how to code this
-					# ADD TO UPDATE LIST
+					# ADAPT SYNAPSES - ADD TO UPDATE LIST
+					neurons[n].adaptSynapses(n, d,  n_learn_addresses, n_active_addresses, n_prev_predict_addresses)
 
 	# Learning
+
 
 	return (n_active_addresses, n_predict_addresses, n_learn_addresses)

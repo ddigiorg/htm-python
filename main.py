@@ -37,7 +37,7 @@ for i in range(5):
 display = graphics.Display(800, 600, in_size, c_size, npc_size)
 layer3b = htm.Layer3b(in_size, c_size, npc_size)
 
-flag = 0
+flag = 1
 
 def loop():
 	global flag
@@ -56,7 +56,7 @@ def loop():
 	display.updateViewProjection()
 	display.updateScene()
 
-	time.sleep(2.0)
+#	time.sleep(3.0)
 
 def main():
 	glutDisplayFunc(loop)
