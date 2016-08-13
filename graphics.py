@@ -2,9 +2,7 @@
 """
 TODO
 
-+ Turn this code into a class to get rid of global variables: class Graphics? maybe different name...
-+ Modify main after turning this into a class
-+ Work on only displaying active columns in opengl window
++ Work on method for only displaying just active columns in opengl window
 + Work on adding text capabilities in opengl windows
 + Work on adding mouse capabilities
 + Address issues and comments
@@ -17,221 +15,216 @@ from OpenGL.GLUT import *
 import numpy as np
 import shader as shader
 
-# openGL application global variables
-windowID = 0
-width, height = 800, 600
+class Display(object):
+	ESCAPE = '\x1b'
 
-# Shader global variables
-shaders_programID      = None
-shaders_projection_loc = None
-shaders_view_loc       = None
-shaders_template_loc   = None
-shaders_position_loc   = None
-shaders_color_loc      = None
-shaders_scale_loc      = None
+	def __init__(self, window_width, window_height, in_size, c_size, npc_size):
+		# OpenGL application variables
+		self.window_width = window_width
+		self.window_height = window_height
 
-# View global variables
-ortho_matrix = None
-view_matrix  = None
-view_x = -15.0
-view_y = 0.0
-view_z = 5.0
-VIEW_SPEED = 0.5
+		# Opengl Initilization
+		glutInit()                                   # Initialize opengl
+		glutInitDisplayMode(GLUT_RGBA)               # RGBA color
+		glutInitWindowSize(self.window_width,        # Initialize window size
+                           self.window_height)
+		glutInitWindowPosition(0, 0)                 # Application window placed at upper left corner of monitor screen
+		self.windowID = glutCreateWindow("HTM Test") # Create windowID with name "HTM"
+		glutKeyboardFunc(self.keyPressed)            # Register function when keyboard pressed
+		glutSpecialFunc(self.keyPressed)             # Register function when keyboard pressed
+		glClearColor(0.0, 0.0, 0.0, 1.0)             # Black background
 
-# VBO global variables
-template_buffer  = None
-position_buffer  = None
-color_buffer     = None
-template_data    = None
+		# Polygon variables
+		self.in_size  = in_size
+		self.c_size   = c_size
+		self.npc_size = npc_size
 
-# Keyboard global variables
-ESCAPE = '\x1b'
+		self.polygon_size = self.in_size + self.c_size * self.npc_size
+		self.POLYGON_SPACING = 0.5
 
+		# View projection  variables
+		self.ortho_matrix = None
+		self.view_matrix  = None
+		self.view_x     = -15.0
+		self.view_y     = 0.0
+		self.view_z     = 5.0
+		self.view_speed = 0.5
 
-def gInitNeuronGraphicsData(num_inputs, num_columns, num_neurons):
-	NEURON_SPACING = 0.5
+		# Shader variables
+		vertex_shader   = shader.compile_shader("VS")
+		fragment_shader = shader.compile_shader("FS")
 
-	# Input neuron positions for graphics as 1D grid
-	in_positions  = np.array( [0.0, 0.0] * num_inputs, dtype=np.float16)
-	for i in range(num_inputs):
-		index = i * 2
-		in_positions[index    ] = 0.0 + i * (1.0 + NEURON_SPACING) # x world position
-		in_positions[index + 1] = 0.0                              # y world position
+		self.shaders_programID      = shader.link_shader_program(vertex_shader, fragment_shader)     
+		self.shaders_template_loc   = glGetAttribLocation( self.shaders_programID, "polygon_template")
+		self.shaders_position_loc   = glGetAttribLocation( self.shaders_programID, "polygon_position")
+		self.shaders_color_loc      = glGetAttribLocation( self.shaders_programID, "polygon_color"   )
+		self.shaders_scale_loc      = glGetUniformLocation(self.shaders_programID, "polygon_scale"   )
+		self.shaders_projection_loc = glGetUniformLocation(self.shaders_programID, "projection"      )
+		self.shaders_view_loc       = glGetUniformLocation(self.shaders_programID, "view"            )
 
-	# Layer3b neuron positions for graphics as 2D grid
-	l3b_positions = np.array( [0.0, 0.0] * num_neurons * num_columns, dtype=np.float16)
-	for c in range(num_columns):
-		for n in range(num_neurons):
-			index = (c * num_neurons + n) * 2
-			l3b_positions[index    ] = 0.0 + c * (1.0 + NEURON_SPACING) # x world position
-			l3b_positions[index + 1] = 3.0 + n * (1.0 + NEURON_SPACING) # y world position
+		# VBO variables
+		self.template_data = None
+		self.position_data = None
+		self.color_data    = None
+		self.template_buffer = glGenBuffers(1)
+		self.position_buffer = glGenBuffers(1)
+		self.color_buffer    = glGenBuffers(1)
 
-	# Input  neuron colors for graphics initialized to "inactive"
-	in_colors  = np.array( [0.5, 0.5, 0.5] * num_inputs, dtype=np.float16)
-
-	# Layer3b neuron colors for graphics initialized to "inactive"
-	l3b_colors = np.array( [0.5, 0.5, 0.5] * num_neurons * num_columns, dtype=np.float16)
-
-	return in_positions, l3b_positions, in_colors, l3b_colors
-
-
-def gInit():
-	global windowID
-
-	glutInit()								# Initialize opengl
-	glutInitDisplayMode(GLUT_RGBA)          # RGBA color
-	glutInitWindowSize(width, height)		# Initialize windowID size
-	glutInitWindowPosition(0, 0)			# Application windowID placed at upper left corner of monitor screen
-	windowID = glutCreateWindow("HTM")		# Create windowID with name "HTM"
-	glutKeyboardFunc(gKeyPressed)			# Register function when keyboard pressed
-	glutSpecialFunc(gKeyPressed)			# Register function when keyboard pressed
-	glClearColor(0.0, 0.0, 0.0, 1.0)		# Black background
-
-
-def gInitShaders():
-	global shaders_programID, shaders_template_loc, shaders_position_loc, shaders_color_loc, shaders_scale_loc, shaders_projection_loc, shaders_view_loc
-
-	vertex_shader   = shader.compile_shader("VS")
-	fragment_shader = shader.compile_shader("FS")
-	shaders_programID = shader.link_shader_program(vertex_shader, fragment_shader)     
-
-	shaders_template_loc   = glGetAttribLocation(shaders_programID, "polygon_template")
-	shaders_position_loc   = glGetAttribLocation(shaders_programID, "polygon_position")
-	shaders_color_loc      = glGetAttribLocation(shaders_programID, "polygon_color")
-	shaders_scale_loc      = glGetUniformLocation(shaders_programID, "polygon_scale")
-	shaders_projection_loc = glGetUniformLocation(shaders_programID, "projection")
-	shaders_view_loc       = glGetUniformLocation(shaders_programID, "view" )
-
-
-def gInitView():
-	global width, height, ortho_matrix
-
-	l = 0.0
-	r = width/100
-	t = height/100
-	b = 0.0
-	f = -1.0
-	n = 1.0
-
-	ortho_matrix = [2.0/(r-l),    0.0,          0.0,          0.0,
-                    0.0,          2.0/(t-b),    0.0,          0.0,
-                    0,0,          0.0,          -2.0/(f-n),   0.0,
-                    -(r+l)/(r-l), -(t+b)/(t-b), -(f+n)/(f-n), 1.0]
-
-
-def gInitVBOs():
-	global template_buffer, position_buffer, color_buffer
+		# Get shader ID
+		glUseProgram(self.shaders_programID)
    
-	# Get shader ID
-	glUseProgram(shaders_programID)
-   
-	# Opengl VBO polygon template buffer created, bound and left empty
-	template_buffer = glGenBuffers(1)
-	glBindBuffer(GL_ARRAY_BUFFER, template_buffer)
-	glBufferData(GL_ARRAY_BUFFER, None, GL_STATIC_DRAW)
+		# Opengl VBO polygon template buffer bound and left empty
+		glBindBuffer(GL_ARRAY_BUFFER, self.template_buffer)
+		glBufferData(GL_ARRAY_BUFFER, None, GL_STATIC_DRAW)
 
-	# Opengl VBO polygon position buffer created, bound, and left empty
-	position_buffer = glGenBuffers(1)
-	glBindBuffer(GL_ARRAY_BUFFER, position_buffer)
-	glBufferData(GL_ARRAY_BUFFER, None, GL_STATIC_DRAW)
+		# Opengl VBO polygon position buffer bound and left empty
+		glBindBuffer(GL_ARRAY_BUFFER, self.position_buffer)
+		glBufferData(GL_ARRAY_BUFFER, None, GL_STATIC_DRAW)
 
-	# Opengl VBO polygon color buffer created, bound, and left empty
-	color_buffer = glGenBuffers(1)
-	glBindBuffer(GL_ARRAY_BUFFER, color_buffer)
-	glBufferData(GL_ARRAY_BUFFER, None, GL_STREAM_DRAW)
+		# Opengl VBO polygon color buffer bound and left empty
+		glBindBuffer(GL_ARRAY_BUFFER, self.color_buffer)
+		glBufferData(GL_ARRAY_BUFFER, None, GL_STREAM_DRAW)
 
 
-def gUpdateView():
-	global view_matrix
+	def initOrthographicProjection(self):
+		l = 0.0
+		r = self.window_width  / 100
+		t = self.window_height / 100
+		b = 0.0
+		f = -1.0
+		n = 1.0
 
-	view_matrix = [1.0,    0.0,    0.0,    0.0,
-				   0.0,    1.0,    0.0,    0.0,
-				   0.0,    0.0,    1.0,    0.0,
-				   view_x, view_y, view_z, 1.0]
-
-def gUpdatePolygonTemplate():
-	# Vertex locations for square polygon template
-	template_list = [-0.5,  0.5, -0.5, -0.5, 0.5, -0.5, 0.5,  0.5, -0.5,  0.5, 0.5, -0.5]
-#	template_list = [-0.0,  0.0] # For GL_POINTS
-	template_data = np.array(template_list, dtype=np.float16)
-
-	# Opengl VBO polygon template buffer bound, filled with data, and shader variable updated
-	glBindBuffer(GL_ARRAY_BUFFER, template_buffer)
-	glBufferData(GL_ARRAY_BUFFER, template_data, GL_STATIC_DRAW)
-	glEnableVertexAttribArray(shaders_template_loc)
-	glVertexAttribPointer(shaders_template_loc, 2, GL_HALF_FLOAT, False, 0, None)
+		self.ortho_matrix = [2.0/(r-l),    0.0,          0.0,          0.0,
+                             0.0,          2.0/(t-b),    0.0,          0.0,
+                             0,0,          0.0,          -2.0/(f-n),   0.0,
+                             -(r+l)/(r-l), -(t+b)/(t-b), -(f+n)/(f-n), 1.0]
 
 
-def gUpdatePolygonPositions(position_data):
-	# Opengl VBO polygon position buffer bound, filled with data, and shader variable updated
-	glBindBuffer(GL_ARRAY_BUFFER, position_buffer)
-	glBufferData(GL_ARRAY_BUFFER, position_data, GL_STATIC_DRAW)
-	glEnableVertexAttribArray(shaders_position_loc)
-	glVertexAttribPointer(shaders_position_loc, 2, GL_HALF_FLOAT, False, 0, None)
+	def initPolygonGraphicsData(self):
+		self.position_data  = np.array( [0.0, 0.0] * self.polygon_size, dtype=np.float16)
+
+		# Input neuron positions for graphics as 1D grid
+		for i in range(self.in_size):
+			index = i * 2
+			self.position_data[index    ] = 0.0 + i * (1.0 + self.POLYGON_SPACING) # x world position
+			self.position_data[index + 1] = 0.0                                    # y world position
+
+		# Layer3b neuron positions for graphics as 2D grid
+		for c in range(self.c_size):
+			for npc in range(self.npc_size):
+				index = ((c * self.npc_size + npc) + self.in_size) * 2
+				self.position_data[index    ] = 0.0 + c   * (1.0 + self.POLYGON_SPACING) # x world position
+				self.position_data[index + 1] = 3.0 + npc * (1.0 + self.POLYGON_SPACING) # y world position
+
+		self.color_data =  np.array( [0.5, 0.5, 0.5] * self.polygon_size, dtype=np.float16)
+
+	def updateViewProjection(self):
+		self.view_matrix = [1.0,         0.0,         0.0,         0.0,
+                            0.0,         1.0,         0.0,         0.0,
+                            0.0,         0.0,         1.0,         0.0,
+                            self.view_x, self.view_y, self.view_z, 1.0]
 
 
-def gUpdatePolygonColors(color_data):
-	# Opengl VBO polygon color buffer bound, filled with data, and shader variable updated
-	glBindBuffer(GL_ARRAY_BUFFER, color_buffer)
-	glBufferData(GL_ARRAY_BUFFER, color_data, GL_STREAM_DRAW)
-	glEnableVertexAttribArray(shaders_color_loc)
-	glVertexAttribPointer(shaders_color_loc, 3, GL_HALF_FLOAT, True, 0, None) # normalized for unsigned char
+	def updatePolygonTemplate(self):
+		# Vertex locations for square polygon template
+		template_list = [-0.5,  0.5, -0.5, -0.5, 0.5, -0.5, 0.5,  0.5, -0.5,  0.5, 0.5, -0.5]
+#		template_list = [-0.0,  0.0] # For GL_POINTS
+		self.template_data = np.array(template_list, dtype=np.float16)
+
+		# Opengl VBO polygon template buffer bound, filled with data, and shader variable updated
+		glBindBuffer(GL_ARRAY_BUFFER, self.template_buffer)
+		glBufferData(GL_ARRAY_BUFFER, self.template_data, GL_STATIC_DRAW)
+		glEnableVertexAttribArray(self.shaders_template_loc)
+		glVertexAttribPointer(self.shaders_template_loc, 2, GL_HALF_FLOAT, False, 0, None)
 
 
-def gUpdateScene(num_polys):
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-
-	glUniform1f(shaders_scale_loc, 1.0)
-
-	# Update shader with orthographic and view matrix
-	glUniformMatrix4fv(shaders_projection_loc, 1, False, ortho_matrix)
-	glUniformMatrix4fv(shaders_view_loc, 1, False, view_matrix)
-
-	# * ?????????? For instancing... figure out what this does
-	glVertexAttribDivisor(0, 0)
-	glVertexAttribDivisor(1, 1)
-	glVertexAttribDivisor(2, 1)
-
-	# Draw cells
-	glDrawArraysInstanced(GL_TRIANGLES, 0, 6*2, num_polys) # 6 vertices per triangle, 2 triangles per square 
-#	glDrawArraysInstanced(GL_POINTS, 0, 1, num_polys) 
-
-#	glUniform1f(shaders_scale_loc, 2.0)
-#	glDrawArraysInstanced(GL_TRIANGLES, 0, 6*2, num_polys) # 6 vertices per triangle, 2 triangles per square 
+	def updatePolygonPositions(self):
+		# Opengl VBO polygon position buffer bound, filled with data, and shader variable updated
+		glBindBuffer(GL_ARRAY_BUFFER, self.position_buffer)
+		glBufferData(GL_ARRAY_BUFFER, self.position_data, GL_STATIC_DRAW)
+		glEnableVertexAttribArray(self.shaders_position_loc)
+		glVertexAttribPointer(self.shaders_position_loc, 2, GL_HALF_FLOAT, False, 0, None)
 
 
-	# Flush the opengl rendering pipeline	
-	glutSwapBuffers()	
+	def updatePolygonColors(self, inputs, layer3b):
+		for i in range(self.in_size):
+			index = i * 3
 
-def gKeyPressed(key, x, y):
-	global view_x, view_y, view_z 
-	if key == ESCAPE.encode():
-		gCleanup()
-	if key == 'a'.encode():
-		view_x += VIEW_SPEED
-	if key == 'd'.encode():
-		view_x -= VIEW_SPEED
-	if key == 'q'.encode():
-		view_y += VIEW_SPEED
-	if key == 'e'.encode():
-		view_y -= VIEW_SPEED
-	if key == 's'.encode():
-		view_z += VIEW_SPEED
-	if key == 'w'.encode():
-		view_z -= VIEW_SPEED
-	glutPostRedisplay()
+			if inputs[i] == 1:
+				self.color_data[index:index + 3] = [0.0, 1.0, 0.0] # Active (Green)
+			else:
+				self.color_data[index:index + 3] = [0.5, 0.5, 0.5] # Inactive (Grey)
 
-def gCleanup():
-	glDisableVertexAttribArray(shaders_template_loc)
-	glDisableVertexAttribArray(shaders_position_loc)
-	glDisableVertexAttribArray(shaders_color_loc)
+		for n in range(self.c_size * self.npc_size):
+			index = (n + self.in_size) * 3
 
-	glDeleteBuffers(1, GLfloat(template_buffer))
-	glDeleteBuffers(1, GLfloat(position_buffer))
-	glDeleteBuffers(1, GLfloat(color_buffer))
-	glDeleteProgram(shaders_programID)
-	glutDestroyWindow(windowID)
-	exit(0)
+			if n in layer3b.n_learn_addresses:
+				self.color_data[index:index + 3] = [0.0, 0.0, 1.0] # Learn (Blue)
+			elif n in layer3b.n_active_addresses:
+				self.color_data[index:index + 3] = [0.0, 1.0, 0.0] # Active (Green)
+			elif n in layer3b.n_predict_addresses:
+				self.color_data[index:index + 3] = [1.0, 0.0, 1.0] # Predict (Violet)
+			else:
+				self.color_data[index:index + 3] = [0.5, 0.5, 0.5] # Inactive (Grey)
 
-def gRunMainGLLoop():
-	glutMainLoop() # Start event processing engine
+		# Opengl VBO polygon color buffer bound, filled with data, and shader variable updated
+		glBindBuffer(GL_ARRAY_BUFFER, self.color_buffer)
+		glBufferData(GL_ARRAY_BUFFER, self.color_data, GL_STREAM_DRAW)
+		glEnableVertexAttribArray(self.shaders_color_loc)
+		glVertexAttribPointer(self.shaders_color_loc, 3, GL_HALF_FLOAT, True, 0, None) # normalized for unsigned char
+
+
+	def updateScene(self):
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+		# Update shader with polygon scale value, orthographic matrix, and view matrix
+		glUniform1f(self.shaders_scale_loc, 1.0)
+		glUniformMatrix4fv(self.shaders_projection_loc, 1, False, self.ortho_matrix)
+		glUniformMatrix4fv(self.shaders_view_loc,       1, False, self.view_matrix)
+
+		# * ?????????? For instancing... figure out what this does
+		glVertexAttribDivisor(0, 0)
+		glVertexAttribDivisor(1, 1)
+		glVertexAttribDivisor(2, 1)
+
+		# Draw cells: 6 vertices per triangle, 2 triangles per square
+		glDrawArraysInstanced(GL_TRIANGLES, 0, 6*2, self.polygon_size) 
+
+#		glDrawArraysInstanced(GL_POINTS, 0, 1, num_polys) 
+#		glUniform1f(shaders_scale_loc, 2.0)
+#		glDrawArraysInstanced(GL_TRIANGLES, 0, 6*2, num_polys) # 6 vertices per triangle, 2 triangles per square 
+
+		# Flush the opengl rendering pipeline	
+		glutSwapBuffers()	
+
+	def keyPressed(self, key, x, y):
+		if key == self.ESCAPE.encode():
+			self.cleanup()
+		if key == 'a'.encode():
+			self.view_x += self.view_speed
+		if key == 'd'.encode():
+			self.view_x -= self.view_speed
+		if key == 'q'.encode():
+			self.view_y += self.view_speed
+		if key == 'e'.encode():
+			self.view_y -= self.view_speed
+		if key == 's'.encode():
+			self.view_z += self.view_speed
+		if key == 'w'.encode():
+			self.view_z -= self.view_speed
+		glutPostRedisplay()
+
+	def cleanup(self):
+		glDisableVertexAttribArray(self.shaders_template_loc)
+		glDisableVertexAttribArray(self.shaders_position_loc)
+		glDisableVertexAttribArray(self.shaders_color_loc)
+
+		glDeleteBuffers(1, GLfloat(self.template_buffer))
+		glDeleteBuffers(1, GLfloat(self.position_buffer))
+		glDeleteBuffers(1, GLfloat(self.color_buffer))
+		glDeleteProgram(self.shaders_programID)
+		glutDestroyWindow(self.windowID)
+		exit(0)
+
+	def runOpenglMainLoop(self):
+		glutMainLoop()

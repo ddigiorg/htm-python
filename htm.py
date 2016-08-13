@@ -1,6 +1,7 @@
 """
 TODO
 
++ Fix: Temporal Memory algorithm messes up because first passthrough of data has no previous learn or active addresses
 + Complete TemporalMemory
 + Add docstring comments for classes, methods, and functions
 + Address issues and comments
@@ -133,18 +134,18 @@ class Neuron(object):
 		self.bs_addresses   = []
 		self.bs_permanences = []
 
-	def segmentActive(self, d, n_active_addresses):
+	def segmentActive(self, d, n_addresses):
 		overlap = 0
 		for bs_address in self.bs_addresses[d]:
-			if bs_address in n_active_addresses:
+			if bs_address in n_addresses:
 				overlap += 1
 
 		if overlap >= self.BS_THRESHOLD2:
 			return True
 
-	def addDendriteSegment(self, n_previous_active_addresses):
-		self.bs_addresses.append(n_previous_active_addresses)
-		self.bs_permanences.append([self.BS_THRESHOLD + 1] * len(n_previous_active_addresses))
+	def addDendriteSegment(self, n_previous_addresses):
+		self.bs_addresses.append(n_previous_addresses)
+		self.bs_permanences.append([self.BS_THRESHOLD + 1] * len(n_previous_addresses))
 
 	def adaptSynapses(self):
 		n = 0 # placeholder... delete this
@@ -217,6 +218,9 @@ def TemporalMemory(c_size,
 				# if segmentActive(d, n_previous_learn_addresses)
 				n_learn_chosen = True # tab this over -->
 				n_learn_addresses.append(n) # tab this over -->
+				print("==========")
+				print("{} bs addresses:   {}".format(n, neurons[n].bs_addresses))
+#				print("{} bs permanences: {}".format(n, neurons[n].bs_permanences))
 
 		if pattern_recognized == False:
 			for npc in range(npc_size):
@@ -224,15 +228,20 @@ def TemporalMemory(c_size,
 				n_active_addresses.append(n)
 
 		if n_learn_chosen == False:
+			print("==========")
+			print("previous learn neuron: {}".format(n_previous_learn_addresses))
 			### Get best matching neuron ### <--put into a Neuron class method
 #			for n in range(num_neurons)
 				# Get best matching segment
-			npc_learn = np.random.random_integers(npc_size-1)
+			npc_learn = np.random.random_integers(npc_size - 1)
 			n_learn = ac * npc_size + npc_learn
 			### ###
 			n_learn_addresses.append(n_learn)
 			neurons[n_learn].addDendriteSegment(n_previous_learn_addresses)
 			# ADD TO UPDATE LIST
+			print("{} bs addresses:   {}".format(n_learn, neurons[n_learn].bs_addresses))
+#			print("{} bs permanences: {}".format(n_learn, neurons[n_learn].bs_permanences))
+
 
 	# Determine predict state for all neurons
 		for n in range (n_size):
@@ -242,9 +251,6 @@ def TemporalMemory(c_size,
 					n_predict_addresses.append(n)
 					# getSegmentActiveSynapses <--lookup in notes on how to code this
 					# ADD TO UPDATE LIST
-
-					print("bs addresses:   {}".format(neurons[n].bs_addresses))
-					print("bs permanences: {}".format(neurons[n].bs_permanences))
 
 	# Learning
 

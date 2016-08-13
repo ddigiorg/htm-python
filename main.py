@@ -6,8 +6,6 @@
 """
 TODO
 
-+ Pass through code and clean up/organize
-+ Rename variables to fit the new naming conventions (see htm.py)
 + Add better timing??? maybe in graphics.py?
 + Address issues and comments
 
@@ -17,100 +15,57 @@ TODO
 from OpenGL.GL import *
 from OpenGL.GLUT import *
 #from OpenGL.GLU import * # <-- uneeded so delete when finished
-import numpy as np
-import random as rand
-import graphics as g
+import graphics as graphics
 import htm as htm
-
+import numpy as np
 import time
 
-colors_dict = {"inactive": [0.5, 0.5, 0.5], # Neuron inactive state
-               "active":   [0.0, 1.0, 0.0], # Neuron active (feed forward)
-               "predict":  [1.0, 0.0, 1.0]} # Neuron predictive state
+# Cortex global variables
+in_size  = 20 # Number of input neurons
+c_size   = 20 # Number of columns
+npc_size = 4  # Number of neurons per column
 
-# Cortex Global Variables
-num_columns   = 20 # Number of columns per region
-num_neurons   = 4  # Number of neurons per column
-#num_dendrites = 10 # Number of dendrites per neuron
-#num_synapses  = 5  # Number of synapses per dendrite
-
-# Input Setup
-num_inputs = 20
+# Input state setup
 inputs = [None] * 2
 for i in range(2):
-	inputs[i] = [0] * num_inputs
+	inputs[i] = [0] * in_size
 for i in range(5):
 	inputs[0][ i  ] = 1
 	inputs[1][-i-1] = 1
 
+# Class initializations
+display = graphics.Display(800, 600, in_size, c_size, npc_size)
+layer3b = htm.Layer3b(in_size, c_size, npc_size)
+
 flag = 0
-
-in_colors  = None
-l3b_colors = None
-region_colors = None
-active_columns = None
-
-layer3b = htm.Layer3b(num_inputs, num_columns, num_neurons)
 
 def loop():
 	global flag
-	global region_colors
 
-	# reset all neuron color data to inactive
-	in_colors  = np.full(num_inputs * 3, 0.5, dtype=np.float16)
-	l3b_colors = np.full(num_columns * num_neurons * 3, 0.5, dtype=np.float16)
-
-	l3b_inputs = []
 	if flag == 0:
-		l3b_inputs = inputs[0]
 		flag = 1
 	else:
-		l3b_inputs = inputs[1]
 		flag = 0
+
+	l3b_inputs = inputs[flag]
 
 	layer3b.runSpatialPooler(l3b_inputs)
 	layer3b.runTemporalMemory()
 
-	for i in range(num_inputs):
-		if l3b_inputs[i] == 1:
-			index = i * 3
-			in_colors[index:index+3] = colors_dict["active"]
-
-	for n in range(num_columns * num_neurons):
-		if n in layer3b.n_predict_addresses:
-			index = n * 3
-			l3b_colors[index:index+3] = colors_dict["predict"]
-		if n in layer3b.n_active_addresses:
-			index = n * 3
-			l3b_colors[index:index+3] = colors_dict["active"]			
-
-	region_colors = np.concatenate( (in_colors, l3b_colors), axis=0 )
-
-	g.gUpdatePolygonColors(region_colors)
-	g.gUpdateView()
-	g.gUpdateScene( int(len(region_colors)/3) )
+	display.updatePolygonColors(l3b_inputs, layer3b)
+	display.updateViewProjection()
+	display.updateScene()
 
 	time.sleep(2.0)
 
 def main():
-	global in_colors, l3b_colors
-	global active_columns
-
-	(in_positions, 
-     l3b_positions, 
-     in_colors, 
-     l3b_colors) = g.gInitNeuronGraphicsData(num_inputs, num_columns, num_neurons)
-
-	region_positions = np.concatenate( (in_positions, l3b_positions), axis=0 )
-
-	g.gInit()
 	glutDisplayFunc(loop)
 	glutIdleFunc(loop)
-	g.gInitShaders()
-	g.gInitView()
-	g.gInitVBOs()
-	g.gUpdatePolygonTemplate()
-	g.gUpdatePolygonPositions(region_positions)
-	g.gRunMainGLLoop()
+ 
+	display.initOrthographicProjection()
+	display.initPolygonGraphicsData()
+	display.updatePolygonTemplate()
+	display.updatePolygonPositions()
+	display.runOpenglMainLoop()
 
 main()
