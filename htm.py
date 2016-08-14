@@ -223,62 +223,44 @@ def TemporalMemory(c_size,
 	n_predict_addresses = []
 	n_learn_addresses   = []
 
-	# Determine active state and learn state for all neurons
-	for ac in c_active_addresses:
-		pattern_recognized = False
-		n_learn_chosen = False
-
-		for npc in range(npc_size):
-			n = ac * npc_size + npc
-			if n in n_prev_predict_addresses:
-				pattern_recognized = True
-				n_active_addresses.append(n)
-				# d = neurons(n).getActiveSegment(n_prev_active_addresses)
-				# if segmentActive(d, n_prev_learn_addresses)
-				n_learn_chosen = True # tab this over -->
-				n_learn_addresses.append(n) # tab this over -->
-				print("==========")
-				print("{} bs addresses:   {}".format(n, neurons[n].bs_addresses))
-				print("{} bs permanences: {}".format(n, neurons[n].bs_permanences))
-
-		if pattern_recognized == False:
-			for npc in range(npc_size):
-				n = ac * npc_size + npc
-				n_active_addresses.append(n)
-
-		if n_learn_chosen == False:
-			### Get best matching neuron ### <--put into a Neuron class method
-#			for n in range(num_neurons)
-				# Get best matching segment
-			npc_learn = np.random.random_integers(npc_size - 1)
-			n_learn = ac * npc_size + npc_learn
-			### ###
-
-			# If there's no previous learn addresses set all neurons in the active column to learn state
-			if n_prev_learn_addresses:
-				n_learn_addresses.append(n_learn)
-			else:
-				for npc in range(npc_size):
-					n_learn_addresses.append(ac * npc_size + npc)
+	c_burst_addresses = c_active_addresses
 	
-			neurons[n_learn].addDendriteSegment(n_prev_learn_addresses)
-			# ADAPT SYNAPSES - ADD TO UPDATE LIST
-			print("==========")
-			print("{} bs addresses:   {}".format(n_learn, neurons[n_learn].bs_addresses))
-			print("{} bs permanences: {}".format(n_learn, neurons[n_learn].bs_permanences))
+	# Phase 1: Activate correctly predicted neurons
+	for n in n_prev_predict_addresses:
+		c = int( np.floor(n / npc_size) )
+		if c in c_active_addresses:
+			n_active_addresses.append(n)
+			n_learn_addresses.append(n)
+			c_burst_addresses.remove(c)
+
+	# Phase 2: Burst unpredicted columns
+	for c in c_burst_addresses:
+		for npc in range(npc_size):
+			n = c * npc_size + npc
+			n_active_addresses.append(n)
+
+		# work on properly getting best matching cell
+		npc_learn = np.random.random_integers(npc_size - 1)
+		n_learn = c * npc_size + npc_learn
+
+		if n_prev_learn_addresses:
+			n_learn_addresses.append(n_learn)
+		else:
+			for npc in range(npc_size):
+				n = c * npc_size + npc
+				n_learn_addresses.append(n)
+		
+		neurons[n_learn].addDendriteSegment(n_prev_learn_addresses)
+
+	# Phase 3: Perform learning by adapting segments
 
 
-	# Determine predict state for all neurons
-		for n in range (n_size):
-			num_dendrites = len(neurons[n].bs_addresses) 
-			for d in range(num_dendrites):
-				if neurons[n].segmentActive(d, n_active_addresses):
-					n_predict_addresses.append(n)
-					# getSegmentActiveSynapses <--lookup in notes on how to code this
-					# ADAPT SYNAPSES - ADD TO UPDATE LIST
-					neurons[n].adaptSynapses(n, d,  n_learn_addresses, n_active_addresses, n_prev_predict_addresses)
 
-	# Learning
-
+	# Phase 4: Compute predicted cells
+	for n in range(n_size):
+		num_dendrites = len( neurons[n].bs_addresses )
+		for d in range(num_dendrites):
+			if neurons[n].segmentActive(d, n_active_addresses):
+				n_predict_addresses.append(n)
 
 	return (n_active_addresses, n_predict_addresses, n_learn_addresses)

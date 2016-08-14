@@ -56,7 +56,7 @@ def loop():
 	display.updateViewProjection()
 	display.updateScene()
 
-#	time.sleep(3.0)
+	time.sleep(1.0)
 
 def main():
 	glutDisplayFunc(loop)
