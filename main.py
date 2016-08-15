@@ -21,9 +21,9 @@ import numpy as np
 import time
 
 # Cortex global variables
-in_size  = 20 # Number of input neurons
-c_size   = 20 # Number of columns
-npc_size = 4  # Number of neurons per column
+in_size  = 2048 # Number of input neurons
+c_size   = 2048 # Number of columns
+npc_size = 32   # Number of neurons per column
 
 # Input state setup
 inputs = [None] * 2
@@ -32,6 +32,8 @@ for i in range(2):
 for i in range(5):
 	inputs[0][ i  ] = 1
 	inputs[1][-i-1] = 1
+
+inputs = np.array(inputs)
 
 # Class initializations
 display = graphics.Display(800, 600, in_size, c_size, npc_size)
@@ -49,14 +51,24 @@ def loop():
 
 	l3b_inputs = inputs[flag]
 
+#	start = time.time()
 	layer3b.runSpatialPooler(l3b_inputs)
-	layer3b.runTemporalMemory()
+#	stop = time.time()
+#	print("Spatial Pooler Time:  {}".format(stop - start))
 
+#	start = time.time()
+	layer3b.runTemporalMemory()
+#	stop = time.time()
+#	print("Temporal Memory Time: {}".format(stop - start))
+
+#	start = time.time()
 	display.updatePolygonColors(l3b_inputs, layer3b)
 	display.updateViewProjection()
 	display.updateScene()
+#	stop = time.time()
+#	print("Graphics Update Time: {}".format(stop - start))
 
-	time.sleep(1.0)
+#	time.sleep(1.0)
 
 def main():
 	glutDisplayFunc(loop)

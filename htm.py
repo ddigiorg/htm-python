@@ -1,10 +1,12 @@
 """
 TODO
 
-+ Fix: Temporal Memory algorithm messes up because first passthrough of data has no previous learn or active addresses
 + Complete TemporalMemory
 + Add docstring comments for classes, methods, and functions
 + Address issues and comments
+
++ Consider adding receptive fields to Column class, aka initialize proximal synapses around certain
++ Consider changinge variable names, i.e. n_prev_predict_addresses -> prev_predict_neurons
 
 """
 
@@ -52,7 +54,7 @@ class Layer3b(object):
 		self.n_learn_addresses   = []
 
 	def runSpatialPooler(self, inputs):
-		self.ac_addresses = SpatialPooler(inputs, self.columns)
+		self.ac_addresses = SpatialPooler( inputs, self.columns)
 
 	def runTemporalMemory(self):
 
@@ -76,80 +78,61 @@ class Layer3b(object):
             self.n_prev_learn_addresses)
 
 
+############################################################################
 class Column(object):
-	'''
-	num_psynapses  
-	ps_addresses   1D list of proximal synapse addresses   e.g. [addr0, addr1, ...]
-                   address of connections to input picked randomly
-	ps_permanences 1D list of proximal synapse permanences e.g. [sp0, sp1, ...]
-	'''
 	PS_CONNECTIVITY     = 0.5
 	PS_THRESHOLD        = 20
 	PS_LEARNING_RATE    = 1
 	PS_PERMANENCE_LOWER = 0
 	PS_PERMANENCE_UPPER = 99
-	AC_PERCENT    = 0.02
+	AC_PERCENT          = 0.02
 
 	def __init__(self, in_size):
 		self.ps_size = int(in_size * self.PS_CONNECTIVITY)
 		self.ps_addresses   = np.random.choice(in_size, self.ps_size, replace=False)
 		self.ps_permanences = np.random.random_integers(self.PS_THRESHOLD, self.PS_THRESHOLD + 1, self.ps_size)
 
-	"""MAKE THIS MORE EFFICIENT"""
 	def adaptProximalSynapses(self, axons):
-		for s in range( len(self.ps_addresses) ):
-
-			# Increment a synapse permanence in a dendrite segment if connected axon is active or permanence is above threshold
-			if axons[self.ps_addresses[s]] == 1 and self.ps_permanences[s] < self.PS_PERMANENCE_UPPER:
-				self.ps_permanences[s] += self.PS_LEARNING_RATE
-
-			# Decrement a synapse permanence in a dendrite segment if connected axon is inactive or permanence is below threshold
-			elif axons[self.ps_addresses[s]] == 0 or self.ps_permanences[s] > self.PS_PERMANENCE_LOWER:
-				self.ps_permanences[s] -= self.PS_LEARNING_RATE
-
-				#  if synapse permanence falls below 0, randomly connect to new axon
-				if self.ps_permanences[s] < 0:
-					connections = np.zeros(len(axons), dtype=np.int8)
-					connections[self.ps_addresses] = 1
-					unused_connections = np.logical_not(connections)
-					new_addresses = np.nonzero(unused_connections > 0)[0] 
-
-					self.ps_addresses[s]   = np.random.choice(new_addresses, None, replace=False)
-					self.ps_permanences[s] = self.PS_THRESHOLD + 1
+		ps_updates = self.PS_LEARNING_RATE * (2 * axons[self.ps_addresses] - 1)
+		self.ps_permanences += ps_updates
+		np.clip(self.ps_permanences, self.PS_PERMANENCE_LOWER, self.PS_PERMANENCE_UPPER, out=self.ps_permanences)
+	
+		"""MAKING THINGS UNSTABLE, KEEP OUT FOR NOW"""
+		"""MAKE CLEARER CODE"""
+#		for s in np.where(self.ps_permanences == 0)[0]:
+#			connections = np.zeros(len(axons), dtype=np.int8)
+#			connections[self.ps_addresses] = 1
+#			new_addresses = np.where(connections == 0)[0]
+#
+#			self.ps_addresses[s]   = np.random.choice(new_addresses, None, replace=False)
+#			self.ps_permanences[s] = self.PS_THRESHOLD + 1
 
 
+#############################################################################
 class Neuron(object):
-	BS_THRESHOLD = 20
-	BS_LEARNING_RATE = 1
+	BS_THRESHOLD        = 20
+	BS_LEARNING_RATE    = 1
 	BS_PERMANENCE_LOWER = 0
 	BS_PERMANENCE_UPPER = 99
-
-	"""CHOOSE BETTER NAME"""
-	BS_THRESHOLD2 = 1
-
-	"""DETERMINE BETTER WAY OF INITIALIZING THIS"""
-	BS_NUM_NEW = 4
+	BS_THRESHOLD2       = 1 # CHOOSE BETTER NAME
+	BS_NUM_NEW          = 4 # DETERMINE BETTER WAY OF INITIALIZING THIS
 
 	def __init__(self):
 		self.bs_addresses   = []
 		self.bs_permanences = []
 
 	def segmentActive(self, d, n_addresses):
-		overlap = 0
-		for bs_address in self.bs_addresses[d]:
-			if bs_address in n_addresses:
-				overlap += 1
-
+		overlap = np.sum( np.in1d(self.bs_addresses[d], n_addresses) )
 		if overlap >= self.BS_THRESHOLD2:
 			return True
 
 	def addDendriteSegment(self, n_previous_addresses):
-		self.bs_addresses.append(n_previous_addresses)
-		self.bs_permanences.append([self.BS_THRESHOLD + 1] * len(n_previous_addresses))
+		if n_previous_addresses:
+			self.bs_addresses.append(n_previous_addresses)
+			self.bs_permanences.append([self.BS_THRESHOLD + 1] * len(n_previous_addresses))
+
 
 	def adaptSynapses(self, n, d, n_learn_addresses, n_active_addresses, n_prev_predict_addresses):
-#		if n in n_prev_learn_addresses:
-
 		s_remove = []
 		for s in range( len(self.bs_addresses[d]) ):
 			if self.bs_addresses[d][s] in n_learn_addresses and self.bs_permanences[d][s] < self.BS_PERMANENCE_UPPER: 
@@ -158,64 +141,48 @@ class Neuron(object):
 			elif self.bs_permanences[d][s] >= self.BS_PERMANENCE_LOWER:
 				self.bs_permanences[d][s] -= self.BS_LEARNING_RATE
 
-#				if self.bs_permanences[d][s] < 0:
-#					s_remove.append(s)
 
-#		for s in s_remove:
-#			del self.bs_addresses[d][s]
-#			del self.bs_permanences[d][s]
-
-
-
-#			elif self.bs_addresses[d][s] not in n_active_addresses and self.bs_addresses[d][s] in n_prev_predict_addresses:
-#				self.bs_permanences[d][s] -= 1
-
-#		elif n not in n_active_addresses and n in n_prev_predict_addresses:
-#			self.bs_permanences[d][s] -= 1
-
-
-"""CONSIDER MAKING THIS A CLASS?"""
-"""CLEAN THIS UP"""
+############################################################################
 def SpatialPooler(axons, columns):
 	c_size        = len(columns)
 	ps_size       = columns[0].ps_size
 	ps_threshold  = columns[0].PS_THRESHOLD
 	ac_percent    = columns[0].AC_PERCENT
-	ac_size       = int( np.ceil( c_size * ac_percent ) )
-	c_active_addresses = []
+	ac_size       = int( c_size * ac_percent )
+	ac_addresses = []
 
 	# Boosting
 	"""ADD BOOSTING TO SPATIAL POOLER"""
 
 	# Overlap: For each column sum the input axon states of connected proximal synapses (synapses above permanence threshold)
-	overlap = [0] * c_size
+	overlap = np.zeros(c_size)
 	for c in range(c_size):
-		for s in range(ps_size):
-			if columns[c].ps_permanences[s] > ps_threshold:
-				overlap[c] += axons[columns[c].ps_addresses[s]]
+		if_ps_connected = columns[c].ps_permanences > ps_threshold
+		ps_values = np.logical_and( axons[columns[c].ps_addresses], if_ps_connected )
+		overlap[c] = np.sum(ps_values)
 
 	"""ADD RANDOM TIEBREAKER IF MULTIPLE OVERLAP SCORES ARE  MAX"""
 	# Inhibiion: Active column addresses are the indices of maximum values in overlap list
 	for ac in range(ac_size):
-		c_active_address = np.argmax(overlap)
-		c_active_addresses.append(c_active_address)
-		overlap[c_active_address] = 0
+		ac_address = np.argmax(overlap)
+		ac_addresses.append(ac_address)
+		overlap[ac_address] = 0
 
 	# Learning
-	for ac_address in c_active_addresses:
-		columns[ac_address].adaptProximalSynapses(axons)
+	for ac in ac_addresses:
+		columns[ac].adaptProximalSynapses(axons)
 
-	return c_active_addresses
+	return ac_addresses
 
-"""CONSIDER MAKING THIS A CLASS?"""
+
+#############################################################################
 def TemporalMemory(c_size,
                    npc_size,
-                   c_active_addresses, 
+                   ac_addresses, 
                    neurons,
                    n_prev_active_addresses,
                    n_prev_predict_addresses,
                    n_prev_learn_addresses):
-
 
 	n_size = c_size * npc_size
 
@@ -223,17 +190,18 @@ def TemporalMemory(c_size,
 	n_predict_addresses = []
 	n_learn_addresses   = []
 
-	c_burst_addresses = c_active_addresses
+	c_burst_addresses = ac_addresses
 	
 	# Phase 1: Activate correctly predicted neurons
 	for n in n_prev_predict_addresses:
 		c = int( np.floor(n / npc_size) )
-		if c in c_active_addresses:
+		if c in ac_addresses:
 			n_active_addresses.append(n)
 			n_learn_addresses.append(n)
 			c_burst_addresses.remove(c)
 
 	# Phase 2: Burst unpredicted columns
+	# INCOMPLETE
 	for c in c_burst_addresses:
 		for npc in range(npc_size):
 			n = c * npc_size + npc
@@ -242,18 +210,13 @@ def TemporalMemory(c_size,
 		# work on properly getting best matching cell
 		npc_learn = np.random.random_integers(npc_size - 1)
 		n_learn = c * npc_size + npc_learn
-
-		if n_prev_learn_addresses:
-			n_learn_addresses.append(n_learn)
-		else:
-			for npc in range(npc_size):
-				n = c * npc_size + npc
-				n_learn_addresses.append(n)
-		
+		n_learn_addresses.append(n_learn)
+	
+	
 		neurons[n_learn].addDendriteSegment(n_prev_learn_addresses)
 
 	# Phase 3: Perform learning by adapting segments
-
+	# INCOMPLETE
 
 
 	# Phase 4: Compute predicted cells

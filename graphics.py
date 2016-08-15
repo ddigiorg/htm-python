@@ -45,9 +45,9 @@ class Display(object):
 		# View projection  variables
 		self.ortho_matrix = None
 		self.view_matrix  = None
-		self.view_x     = -15.0
+		self.view_x     = -35.0
 		self.view_y     = 0.0
-		self.view_z     = 5.0
+		self.view_z     = 10.0
 		self.view_speed = 0.5
 
 		# Shader variables
@@ -147,25 +147,27 @@ class Display(object):
 
 
 	def updatePolygonColors(self, inputs, layer3b):
+
+		# Set all input and layer3b neurons to Inactive (Grey)
+		self.color_data =  np.array( [0.5, 0.5, 0.5] * self.polygon_size, dtype=np.float16)
+
 		for i in range(self.in_size):
 			index = i * 3
-
 			if inputs[i] == 1:
 				self.color_data[index:index + 3] = [0.0, 1.0, 0.0] # Active (Green)
-			else:
-				self.color_data[index:index + 3] = [0.5, 0.5, 0.5] # Inactive (Grey)
 
-		for n in range(self.c_size * self.npc_size):
-			index = (n + self.in_size) * 3
+		for n in layer3b.n_active_addresses:
+			index = (self.in_size + n) * 3
+			self.color_data[index:index + 3] = [0.0, 1.0, 0.0] # Active (Green)
 
-			if n in layer3b.n_learn_addresses:
-				self.color_data[index:index + 3] = [0.0, 0.0, 1.0] # Learn (Blue)
-			elif n in layer3b.n_active_addresses:
-				self.color_data[index:index + 3] = [0.0, 1.0, 0.0] # Active (Green)
-			elif n in layer3b.n_predict_addresses:
-				self.color_data[index:index + 3] = [1.0, 0.0, 1.0] # Predict (Violet)
-			else:
-				self.color_data[index:index + 3] = [0.5, 0.5, 0.5] # Inactive (Grey)
+		for n in layer3b.n_learn_addresses:
+			index = (self.in_size + n) * 3
+			self.color_data[index:index + 3] = [0.0, 0.0, 1.0] # Learn (Blue)
+
+		for n in layer3b.n_predict_addresses:
+			index = (self.in_size + n) * 3
+			self.color_data[index:index + 3] = [1.0, 0.0, 1.0] # Predict (Violet)
+
 
 		# Opengl VBO polygon color buffer bound, filled with data, and shader variable updated
 		glBindBuffer(GL_ARRAY_BUFFER, self.color_buffer)
