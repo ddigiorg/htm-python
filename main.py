@@ -12,6 +12,8 @@ TODO
 + Update README.md
 
 + For all files choose naming convention for size or number of items in a list
++ For all files change "neuron" to "cell"
++ For all files change tabs to spaces
 """
 
 from OpenGL.GL import *
@@ -25,7 +27,7 @@ import time
 # Cortex global variables
 in_size  = 50 # Number of input neurons
 c_size   = 50 # Number of columns
-npc_size = 8   # Number of neurons per column
+npc_size = 4   # Number of neurons per column
 
 # Input state setup
 inputs = np.zeros((3, in_size), dtype=np.int8)
@@ -70,8 +72,8 @@ def loop():
 
 	if flag == 0:
 		flag = 1
-	elif flag == 1:
-		flag = 2
+#	elif flag == 1:
+#		flag = 2
 	else:
 		flag = 0
 

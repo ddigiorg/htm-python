@@ -1,65 +1,60 @@
 """
 TODO
 
++ Figure out better way to organize Column and Cell classes
 + Complete TemporalMemory
 + Add docstring comments for classes and methods
 + Address issues and comments
 
 + Consider adding receptive fields to Column class, aka initialize proximal synapses around certain
-+ Consider changinge variable names, i.e. n_prev_predict_addresses -> prev_predict_neurons
 
 """
-
-import numpy as np
-
 # c   means column
 # ac  means active column
-# n   means neuron
-# npc means neuron per column
+# n   means cell
+# npc means cell per column
 # d   means dendrite segment
 # s   means synapse
 # ps  means proximal synapse
 # bs  means basal synapse
 
 
-class Layer3b(object):
-	def __init__(self, in_size, c_size, npc_size):
-		self.c_size   = c_size
-		self.npc_size = npc_size
+import numpy as np
 
-		self.columns = [Column(in_size) for c in range(c_size)]
-		self.neurons = [Neuron()        for n in range(c_size * npc_size)]
-		self.sp = SpatialPooler(c_size, 
-                                self.columns[0].ps_size, 
-                                self.columns[0].PS_THRESHOLD, 
-                                self.columns[0].AC_PERCENT)
-		self.tm = TemporalMemory(c_size, npc_size)
+class Layer3b(object):
+	def __init__(self, inum_cells, num_columns, num_cells_per_column):
+		self.num_columns   = num_columns
+		self.num_cells_per_column = num_cells_per_column
+
+		self.columns = [Column(inum_cells, num_cells_per_column) for c in range(num_columns)]
+		self.sp = SpatialPooler(self.columns)
+		self.tm = TemporalMemory(self.columns, num_cells_per_column)
 
 		self.active_columns = []
 
-		self.prev_active_neurons  = []
-		self.prev_predict_neurons = []
-		self.prev_winner_neurons  = []
+		self.prev_active_cells  = []
+		self.prev_predict_cells = []
+		self.prev_winner_cells  = []
 
-		self.active_neurons  = []
-		self.predict_neurons = []
-		self.winner_neurons  = []
+		self.active_cells  = []
+		self.predict_cells = []
+		self.winner_cells  = []
 
 	def runSpatialPooler(self, inputs):
 		self.active_columns = self.sp.compute(inputs, self.columns)
 
 	def runTemporalMemory(self):
-		self.prev_active_neurons  = self.active_neurons[:]
-		self.prev_predict_neurons = self.predict_neurons[:]
-		self.prev_winner_neurons   = self.winner_neurons[:]
+		self.prev_active_cells  = self.active_cells[:]
+		self.prev_predict_cells = self.predict_cells[:]
+		self.prev_winner_cells  = self.winner_cells[:]
 
-		(self.active_neurons, 
-         self.predict_neurons, 
-         self.winner_neurons) = self.tm.compute(self.neurons,
+		(self.active_cells, 
+         self.predict_cells, 
+         self.winner_cells) = self.tm.compute(
             self.active_columns, 
-            self.prev_active_neurons,
-            self.prev_predict_neurons,
-            self.prev_winner_neurons)
+            self.prev_active_cells,
+            self.prev_predict_cells,
+            self.prev_winner_cells)
 
 
 ############################################################################
@@ -71,10 +66,14 @@ class Column(object):
 	PS_PERMANENCE_UPPER = 99
 	AC_PERCENT          = 0.02
 
-	def __init__(self, in_size):
-		self.ps_size = int(in_size * self.PS_CONNECTIVITY)
-		self.ps_addresses   = np.random.choice(in_size, self.ps_size, replace=False)
+	def __init__(self, inum_cells, num_cells_per_column):
+		self.ps_size = int(inum_cells * self.PS_CONNECTIVITY)
+		self.ps_addresses   = np.random.choice(inum_cells, self.ps_size, replace=False)
 		self.ps_permanences = np.random.random_integers(self.PS_THRESHOLD, self.PS_THRESHOLD + 1, self.ps_size)
+
+		self.cells = [Cell() for cell in range(num_cells_per_column)]
+
+		self.has_active_basal_dendrites = False
 
 	def dendriteAdapt(self, axons):
 		ps_updates = self.PS_LEARNING_RATE * (2 * axons[self.ps_addresses] - 1)
@@ -93,13 +92,13 @@ class Column(object):
 
 
 #############################################################################
-class Neuron(object):
+class Cell(object):
 	BS_THRESHOLD        = 20
 	BS_LEARNING_RATE    = 1
 	BS_PERMANENCE_LOWER = 0
 	BS_PERMANENCE_UPPER = 99
 	BS_THRESHOLD2       = 1 # CHOOSE BETTER NAME
-	BS_NUM_NEW          = 4 # DETERMINE BETTER WAY OF INITIALIZING THIS
+	BS_MAX_NEW          = 4 # DETERMINE BETTER WAY OF INITIALIZING THIS
 
 	def __init__(self):
 		self.bs_addresses = []
@@ -116,42 +115,36 @@ class Neuron(object):
 		self.active_dendrites = []
 		self.learn_dendrites  = []
 
-	def dendriteActive(self, d, active_neurons):
-		overlap = np.sum( np.in1d(self.bs_addresses[d], active_neurons) )
-
-		print("bs_addresses:", self.bs_addresses[d])
-		print("active neurons:", active_neurons)
-		print("overlap", overlap)
-
-#		print(overlap)
+	def dendriteActive(self, d, active_cells):
+		overlap = np.sum( np.in1d(self.bs_addresses[d], active_cells) )
 		if overlap >= self.BS_THRESHOLD2:
 			self.active_dendrites.append(d)
 			return True
 
-	def dendriteAdd(self, prev_neurons):
-		self.bs_addresses.append(prev_neurons)
-		self.bs_permanences.append( [self.BS_THRESHOLD + 1] * len(prev_neurons) )
+	def dendriteAdd(self, prev_cells):
+		self.bs_addresses.append(prev_cells)
+		self.bs_permanences.append( [self.BS_THRESHOLD + 1] * len(prev_cells) )
 		self.learn_dendrites.append( len(self.bs_addresses) - 1 )
 
-	def dendriteAdapt(self, active_neurons, is_winner_neuron, n_size):
+	def dendriteAdapt(self, active_cells, is_winner_cell, num_cells):
 		for d in self.prev_active_dendrites + self.learn_dendrites:
-			if d in self.learn_dendrites or is_winner_neuron:
-				neuron_axons = np.zeros(n_size)
-				neuron_axons[active_neurons] = 1
+			if d in self.learn_dendrites or is_winner_cell:
+				cell_axons = np.zeros(num_cells)
+				cell_axons[active_cells] = 1
 
-				bs_updates = self.BS_LEARNING_RATE * (2 * neuron_axons[self.bs_addresses[d]] - 1)
+				bs_updates = self.BS_LEARNING_RATE * (2 * cell_axons[self.bs_addresses[d]] - 1)
 				self.bs_permanences[d] += bs_updates
 
 
 ############################################################################
 class SpatialPooler(object):
 
-	def __init__(self, c_size, ps_size, ps_threshold, ac_percent):
-		self.c_size = c_size
-		self.ps_size = ps_size
-		self.ps_threshold = ps_threshold
-		self.ac_percent = ac_percent
-		self.ac_size = int( c_size * ac_percent )
+	def __init__(self, columns):
+		self.num_columns = len(columns)
+		self.ps_size = columns[0].ps_size
+		self.ps_threshold = columns[0].PS_THRESHOLD
+		self.ac_percent = columns[0].AC_PERCENT
+		self.anum_columns = int( self.num_columns * self.ac_percent )
 
 	def compute(self, axons, columns):
 		active_columns = []
@@ -160,15 +153,15 @@ class SpatialPooler(object):
 		"""ADD BOOSTING TO SPATIAL POOLER"""
 
 		# Overlap: For each column sum the input axon states of connected proximal synapses (synapses above permanence threshold)
-		overlap = np.zeros(self.c_size)
-		for c in range(self.c_size):
+		overlap = np.zeros(self.num_columns)
+		for c in range(self.num_columns):
 			if_ps_connected = columns[c].ps_permanences > self.ps_threshold
 			ps_values = np.logical_and( axons[columns[c].ps_addresses], if_ps_connected )
 			overlap[c] = np.sum(ps_values)
 
 		"""ADD RANDOM TIEBREAKER IF MULTIPLE OVERLAP SCORES ARE  MAX"""
 		# Inhibiion: Active column addresses are the indices of maximum values in overlap list
-		for ac in range(self.ac_size):
+		for ac in range(self.anum_columns):
 			active_column = np.argmax(overlap)
 			active_columns.append(active_column)
 			overlap[active_columns] = 0
@@ -183,69 +176,70 @@ class SpatialPooler(object):
 #############################################################################
 class TemporalMemory(object):
 
-	def __init__(self, c_size, npc_size):
-		self.c_size = c_size
-		self.npc_size = npc_size
-		self.n_size = c_size * npc_size
+	def __init__(self, columns, num_cells_per_column):
+		self.num_columns = len(columns)
+		self.num_cells_per_column = num_cells_per_column
+		self.num_cells = self.num_columns * self.num_cells_per_column
+
+		self.columns = columns
+
+		self.max_new_synapse_count = columns[0].cells[0].BS_MAX_NEW
 
 	def compute(self,
-                neurons,
                 active_columns,
-                prev_active_neurons,
-                prev_predict_neurons,
-                prev_winner_neurons):
+                prev_active_cells,
+                prev_predict_cells,
+                prev_winner_cells):
 
-		active_neurons  = []
-		predict_neurons = []
-		winner_neurons  = []
+		active_cells  = []
+		predict_cells = []
+		winner_cells  = []
 
-		burst_columns = active_columns[:]
 
-		print("active column", active_columns)
-	
-#		for n in range(self.n_size):
-#			neurons[n].dendritesSet()
+		cells_to_add = []
+		winner_cell = []
 
-		# Phase 1: Activate correctly predicted neurons
-		for n in prev_predict_neurons:
-			c = int( np.floor(n / self.npc_size) )
-			if c in active_columns:
-				active_neurons.append(n)
-				winner_neurons.append(n)
-				burst_columns.remove(c)
+		columns = self.columns
 
-		# Phase 2: Burst unpredicted columns
-		# INCOMPLETE
-		for c in burst_columns:
-			for npc in range(self.npc_size):
-				n = c * self.npc_size + npc
-				active_neurons.append(n)
+		for column in range(self.num_columns):
 
-			# work on properly getting best matching cell
-			npc_winner = np.random.random_integers(self.npc_size - 1)
-			n_winner = c * self.npc_size + npc_winner
-			winner_neurons.append(n_winner)
+			a = False
+			if column in active_columns:
+				if columns[column].has_active_basal_dendrites:
+					self.activatePredictedColumn(column)
+					active_cells += cells_to_add
+					winner_cells += cells_to_add 
+				else:
+					cells_to_add, winner_cell = self.burstColumn(column, prev_winner_cells)
+					active_cells += cells_to_add
+					winner_cells.append(winner_cell)
 
-			# FIGURE THIS STUPID THING OUT...... HOW TO HANDLE INITIALIZATION...
-			neurons[n_winner].dendriteAdd(prev_winner_neurons)
+		# Make better
+		columns[column].has_active_basal_dendrites = False
+		for cell in range(self.num_cells_per_column):
+			num_dendrites = len( columns[column].cells[cell].bs_addresses )
+			for dendrite in range(num_dendrites):
+				if columns[column].cells[cell].dendriteActive(active_cells):
+					columns[column].has_active_basal_dendrites = True
 
-#		# Phase 3: Perform learning by adapting segments
-#		# INCOMPLETE
-#		for n in range(self.n_size):
-#			is_winner_neuron = False
-#			if n in winner_neurons:
-#				is_winner_neuron = True	
-#			neurons[n].dendriteAdapt(prev_active_neurons, is_winner_neuron, self.n_size)
+		return (active_cells, predict_cells, winner_cells)
 
-		# Phase 4: Compute predicted cells
-		for n in range(self.n_size):
-			num_dendrites = len( neurons[n].bs_addresses )
-			for d in range(num_dendrites):
-				print()
-				print("neuron", n)
-				if neurons[n].dendriteActive(d, active_neurons):
-					predict_neurons.append(n)
+#	def activatePredictedColumn(self, column):
+ 
 
-		print("==============")
+	def burstColumn(self, column, prev_winner_cells):
+		start = column * self.num_cells_per_column
+		cells = range(start, start + self.num_cells_per_column)
 
-		return (active_neurons, predict_neurons, winner_neurons)
+		# if matching segment is not none
+		# e#lse
+		best_cell = np.random.choice(cells, 1)[0]
+		num_added_synapses = min( self.max_new_synapse_count, len(prev_winner_cells) )
+		if num_added_synapses > 0:
+
+			# make better
+			best_cell_per_column = best_cell - (column * self.num_cells_per_column)
+
+			self.columns[column].cells[best_cell_per_column].dendriteAdd(prev_winner_cells)
+		
+		return cells, best_cell

@@ -148,7 +148,7 @@ class Display(object):
 
 	def updatePolygonColors(self, inputs, layer3b):
 
-		# Set all input and layer3b neurons to Inactive (Grey)
+		# Set all input and layer3b cells to Inactive (Grey)
 		self.color_data =  np.array( [0.5, 0.5, 0.5] * self.polygon_size, dtype=np.float16)
 
 		for i in range(self.in_size):
@@ -156,15 +156,15 @@ class Display(object):
 			if inputs[i] == 1:
 				self.color_data[index:index + 3] = [0.0, 1.0, 0.0] # Active (Green)
 
-		for n in layer3b.active_neurons:
+		for n in layer3b.active_cells:
 			index = (self.in_size + n) * 3
 			self.color_data[index:index + 3] = [0.0, 1.0, 0.0] # Active (Green)
 
-#		for n in layer3b.winner_neurons:
-#			index = (self.in_size + n) * 3
-#			self.color_data[index:index + 3] = [0.0, 0.0, 1.0] # Winner (Blue)
+		for n in layer3b.winner_cells:
+			index = (self.in_size + n) * 3
+			self.color_data[index:index + 3] = [0.0, 0.0, 1.0] # Winner (Blue)
 
-		for n in layer3b.predict_neurons:
+		for n in layer3b.predict_cells:
 			index = (self.in_size + n) * 3
 			self.color_data[index:index + 3] = [1.0, 0.0, 1.0] # Predict (Violet)
 
