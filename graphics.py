@@ -156,17 +156,20 @@ class Display(object):
 			if inputs[i] == 1:
 				self.color_data[index:index + 3] = [0.0, 1.0, 0.0] # Active (Green)
 
-		for n in layer3b.active_cells:
-			index = (self.in_size + n) * 3
-			self.color_data[index:index + 3] = [0.0, 1.0, 0.0] # Active (Green)
+		cells_per_column = layer3b.column_instances[0].num_cells
 
-		for n in layer3b.winner_cells:
-			index = (self.in_size + n) * 3
-			self.color_data[index:index + 3] = [0.0, 0.0, 1.0] # Winner (Blue)
+		for column, column_instance in enumerate(layer3b.column_instances):
+			for cell, active_cells in enumerate(column_instance.active_cells):
+				index = (self.in_size + cells_per_column * column + cell) * 3
+				self.color_data[index:index + 3] = [0.0, 1.0, 0.0] # Active (Green)
 
-		for n in layer3b.predict_cells:
-			index = (self.in_size + n) * 3
-			self.color_data[index:index + 3] = [1.0, 0.0, 1.0] # Predict (Violet)
+#			for n in layer3b.winner_cells:
+#				index = (self.in_size + n) * 3
+#				self.color_data[index:index + 3] = [0.0, 0.0, 1.0] # Winner (Blue)
+
+#			for n in layer3b.predict_cells:
+#				index = (self.in_size + n) * 3
+#				self.color_data[index:index + 3] = [1.0, 0.0, 1.0] # Predict (Violet)
 
 
 		# Opengl VBO polygon color buffer bound, filled with data, and shader variable updated
