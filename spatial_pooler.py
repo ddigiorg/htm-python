@@ -11,32 +11,26 @@ class SpatialPooler(object):
 		columns = layer.columns
 
 		overlap = []
-		active_columns = []
 		num_active_columns = int( len(columns) * self.ACTIVE_COLUMN_PERCENT )
-#		num_active_columns = 1
-
-		overlap = list( range( len(columns) ) )
 
 		# Overlap
-		# TODO: Make faster
 		for column in columns:
-			proximal_synapses = column.proximal_dendrite.synapses
-			
-			ps_addresses = np.array( [ps.address for ps in proximal_synapses] )
-			ps_permanences = np.array( [ps.permanence for ps in proximal_synapses] )
+			ps_addresses =  column.proximal_dendrite.synapse_addresses
+			ps_permanences = column.proximal_dendrite.synapse_permanences
 
 			if_connected = ps_permanences > self.PS_THRESHOLD
 			values = np.logical_and( axons[ps_addresses], if_connected )
 			overlap.append( np.sum(values) )
 
+			column.is_active = False
+
 		# Inhibition
 		# TODO: Add random tiebreaker if multiple overlap scores are max
+
 		for _ in range(num_active_columns):
 			active_column = np.argmax(overlap)
-			active_columns.append(active_column)
-			del overlap[active_column]
+			columns[active_column].is_active = True
+			overlap[active_column] = 0
 
 		# Learning
 		# TODO: Complete learning
-
-#		print(active_columns)

@@ -18,7 +18,7 @@ import shader as shader
 class Display(object):
 	ESCAPE = '\x1b'
 
-	def __init__(self, window_width, window_height, in_size, c_size, npc_size):
+	def __init__(self, window_width, window_height, num_inputs, num_columns, num_neurons_per_column):
 		# OpenGL application variables
 		self.window_width = window_width
 		self.window_height = window_height
@@ -35,11 +35,11 @@ class Display(object):
 		glClearColor(0.0, 0.0, 0.0, 1.0)             # Black background
 
 		# Polygon variables
-		self.in_size  = in_size
-		self.c_size   = c_size
-		self.npc_size = npc_size
+		self.num_inputs  = num_inputs
+		self.num_columns = num_columns
+		self.num_neurons_per_column = num_neurons_per_column
 
-		self.polygon_size = self.in_size + self.c_size * self.npc_size
+		self.polygon_size = self.num_inputs + self.num_columns * self.num_neurons_per_column
 		self.POLYGON_SPACING = 0.5
 
 		# View projection  variables
@@ -104,15 +104,15 @@ class Display(object):
 		self.position_data  = np.array( [0.0, 0.0] * self.polygon_size, dtype=np.float16)
 
 		# Input neuron positions for graphics as 1D grid
-		for i in range(self.in_size):
+		for i in range(self.num_inputs):
 			index = i * 2
 			self.position_data[index    ] = 0.0 + i * (1.0 + self.POLYGON_SPACING) # x world position
 			self.position_data[index + 1] = 0.0                                    # y world position
 
 		# Layer3b neuron positions for graphics as 2D grid
-		for c in range(self.c_size):
-			for npc in range(self.npc_size):
-				index = ((c * self.npc_size + npc) + self.in_size) * 2
+		for c in range(self.num_columns):
+			for npc in range(self.num_neurons_per_column):
+				index = ((c * self.num_neurons_per_column + npc) + self.num_inputs) * 2
 				self.position_data[index    ] = 0.0 + c   * (1.0 + self.POLYGON_SPACING) # x world position
 				self.position_data[index + 1] = 3.0 + npc * (1.0 + self.POLYGON_SPACING) # y world position
 
@@ -146,30 +146,27 @@ class Display(object):
 		glVertexAttribPointer(self.shaders_position_loc, 2, GL_HALF_FLOAT, False, 0, None)
 
 
-	def updatePolygonColors(self, inputs, layer3b):
+	def updatePolygonColors(self, inputs, layer):
 
 		# Set all input and layer3b cells to Inactive (Grey)
 		self.color_data =  np.array( [0.5, 0.5, 0.5] * self.polygon_size, dtype=np.float16)
 
-		for i in range(self.in_size):
+		for i in range(self.num_inputs):
 			index = i * 3
 			if inputs[i] == 1:
 				self.color_data[index:index + 3] = [0.0, 1.0, 0.0] # Active (Green)
 
-		cells_per_column = layer3b.column_instances[0].num_cells
+		for active_neuron_index in layer.active_neuron_indices:
+			index = (self.num_inputs + active_neuron_index) * 3
+			self.color_data[index:index + 3] = [0.0, 1.0, 0.0] # Active (Green)
 
-		for column, column_instance in enumerate(layer3b.column_instances):
-			for cell, active_cells in enumerate(column_instance.active_cells):
-				index = (self.in_size + cells_per_column * column + cell) * 3
-				self.color_data[index:index + 3] = [0.0, 1.0, 0.0] # Active (Green)
+		for winner_neuron_index in layer.winner_neuron_indices:
+			index = (self.num_inputs + winner_neuron_index) * 3
+			self.color_data[index:index + 3] = [0.0, 0.0, 1.0] # Winner (Blue)
 
-#			for n in layer3b.winner_cells:
-#				index = (self.in_size + n) * 3
-#				self.color_data[index:index + 3] = [0.0, 0.0, 1.0] # Winner (Blue)
-
-#			for n in layer3b.predict_cells:
-#				index = (self.in_size + n) * 3
-#				self.color_data[index:index + 3] = [1.0, 0.0, 1.0] # Predict (Violet)
+		for predict_neuron_index in layer.predict_neuron_indices:
+			index = (self.num_inputs + predict_neuron_index) * 3
+			self.color_data[index:index + 3] = [1.0, 0.0, 1.0] # Predict (Violet)
 
 
 		# Opengl VBO polygon color buffer bound, filled with data, and shader variable updated

@@ -19,25 +19,35 @@ TODO
 from OpenGL.GL import *
 from OpenGL.GLUT import *
 #from OpenGL.GLU import * # <-- uneeded so delete when finished
-import graphics as graphics
-import htm as htm
+
+import graphics
+import cortex
+import spatial_pooler
+import temporal_memory
+
 import numpy as np
 import time
 
 # Cortex global variables
-in_size  = 50 # Number of input neurons
-c_size   = 50 # Number of columns
-npc_size = 4   # Number of neurons per column
+num_inputs  = 50
+num_columns = 50
+num_neurons_per_column = 4
 
 # Input state setup
-inputs = np.zeros((3, in_size), dtype=np.int8)
+inputs = np.zeros((3, num_inputs), dtype=np.int8)
 inputs[0,  0: 5] = 1
 inputs[1,  5:10] = 1
 inputs[2, 10:15] = 1
 
 # Class initializations
-display = graphics.Display(800, 600, in_size, c_size, npc_size)
-layer3b = htm.Layer3b(in_size, c_size, npc_size)
+display = graphics.Display(800, 600, num_inputs, num_columns, num_neurons_per_column)
+
+#start = time.time()
+layer3b = cortex.Layer3b(num_inputs, num_columns, num_neurons_per_column)
+#print("Layer3b Init Time: {}".format(time.time() - start))
+
+sp = spatial_pooler.SpatialPooler()
+tm = temporal_memory.TemporalMemory()
 
 flag = 0
 
@@ -47,26 +57,18 @@ def loop():
 	l3b_inputs = inputs[flag]
 
 #	start = time.time()
-	layer3b.runSpatialPooler(l3b_inputs)
-#	stop = time.time()
-#	print("Spatial Pooler Time:  {}".format(stop - start))
+	sp.compute(layer3b, l3b_inputs)
+#	print("Spatial Pooler Time:  {}".format(time.time() - start))
 
 #	start = time.time()
-	layer3b.runTemporalMemory()
-#	stop = time.time()
-#	print("Temporal Memory Time: {}".format(stop - start))
-
-#	print( layer3b.active_columns )
-#	wn = layer3b.winner_neurons[0]
-#	print( layer3b.neurons[wn].bs_addresses )
-#	print( layer3b.neurons[wn].bs_permanences )
+	tm.compute(layer3b)
+#	print("Temporal Memory Time: {}".format(time.time() - start))
 
 #	start = time.time()
 	display.updatePolygonColors(l3b_inputs, layer3b)
 	display.updateViewProjection()
 	display.updateScene()
-#	stop = time.time()
-#	print("Graphics Update Time: {}".format(stop - start))
+#	print("Graphics Update Time: {}".format(time.time() - start))
 
 	time.sleep(1.0)
 
@@ -76,6 +78,7 @@ def loop():
 #		flag = 2
 	else:
 		flag = 0
+
 
 def main():
 	glutDisplayFunc(loop)
