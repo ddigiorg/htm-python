@@ -1,3 +1,11 @@
+"""
+TODO
+
++ Read over and optimize
++ Add learning
++ Address comments
+"""
+
 import numpy as np
 
 class SpatialPooler(object):
@@ -7,7 +15,6 @@ class SpatialPooler(object):
 		self.ACTIVE_COLUMN_PERCENT = 0.02
 
 	def compute(self, layer, axons):
-		
 		columns = layer.columns
 
 		overlap = []
@@ -34,3 +41,5 @@ class SpatialPooler(object):
 
 		# Learning
 		# TODO: Complete learning
+
+#		print( [column.idx for column in columns if column.is_active == True] )

@@ -156,16 +156,16 @@ class Display(object):
 			if inputs[i] == 1:
 				self.color_data[index:index + 3] = [0.0, 1.0, 0.0] # Active (Green)
 
-		for active_neuron_index in layer.active_neuron_indices:
-			index = (self.num_inputs + active_neuron_index) * 3
+		for active_neuron in layer.active_neurons:
+			index = (self.num_inputs + active_neuron.idx) * 3
 			self.color_data[index:index + 3] = [0.0, 1.0, 0.0] # Active (Green)
 
-		for winner_neuron_index in layer.winner_neuron_indices:
-			index = (self.num_inputs + winner_neuron_index) * 3
+		for winner_neuron in layer.winner_neurons:
+			index = (self.num_inputs + winner_neuron.idx) * 3
 			self.color_data[index:index + 3] = [0.0, 0.0, 1.0] # Winner (Blue)
 
-		for predict_neuron_index in layer.predict_neuron_indices:
-			index = (self.num_inputs + predict_neuron_index) * 3
+		for predict_neuron in layer.predict_neurons:
+			index = (self.num_inputs + predict_neuron.idx) * 3
 			self.color_data[index:index + 3] = [1.0, 0.0, 1.0] # Predict (Violet)
 
 
