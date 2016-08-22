@@ -15,6 +15,24 @@ from OpenGL.GLUT import *
 import numpy as np
 import shader as shader
 
+
+class Polygon(object):
+	template = [-0.5,  0.5, -0.5, -0.5, 0.5, -0.5, 0.5,  0.5, -0.5,  0.5, 0.5, -0.5]
+	SPACING = 0.1
+
+	def __init__(self, x_idx, y_idx, x_offset, y_offset):
+		self.x_idx = x_idx
+		self.y_idx = y_idx
+
+		self.x_offset = x_offset
+		self.y_offset = y_offset
+
+		self.position = [0.0, 0.0]
+		self.position[0] = x_offset + x_idx * (1.0 + self.SPACING) # x world position
+		self.position[1] = y_offset + y_idx * (1.0 + self.SPACING) # y world position
+
+		self.color = [0.5, 0.5, 0.5]
+
 class Display(object):
 	ESCAPE = '\x1b'
 
@@ -35,18 +53,35 @@ class Display(object):
 		glClearColor(0.0, 0.0, 0.0, 1.0)             # Black background
 
 		# Polygon variables
-		self.num_inputs  = num_inputs
-		self.num_columns = num_columns
+		if num_inputs > 70:
+			self.num_inputs = 70
+		else:
+			self.num_inputs = num_inputs
+
+		if num_columns > 70:
+			self.num_columns = 70
+		else:
+			self.num_columns = num_columns
+
 		self.num_neurons_per_column = num_neurons_per_column
 
-		self.polygon_size = self.num_inputs + self.num_columns * self.num_neurons_per_column
-		self.POLYGON_SPACING = 0.5
+		self.num_polygons = self.num_inputs + self.num_columns * self.num_neurons_per_column
+
+		if num_columns > 50:
+			num_c = 50
+		else:
+			num_c = num_columns
+
+		self.num_neurons = self.num_columns * num_neurons_per_column
+
+		self.polygons0 = [Polygon(x_idx, 0, 0, 0) for x_idx in range(self.num_inputs)]
+		self.polygons1 = [Polygon(x_idx, y_idx, 0, 3) for x_idx in range(self.num_columns) for y_idx in range(num_neurons_per_column)]
 
 		# View projection  variables
 		self.ortho_matrix = None
 		self.view_matrix  = None
-		self.view_x     = -35.0
-		self.view_y     = 0.0
+		self.view_x     = -38.0
+		self.view_y     = -10.0
 		self.view_z     = 10.0
 		self.view_speed = 0.5
 
@@ -63,9 +98,6 @@ class Display(object):
 		self.shaders_view_loc       = glGetUniformLocation(self.shaders_programID, "view"            )
 
 		# VBO variables
-		self.template_data = None
-		self.position_data = None
-		self.color_data    = None
 		self.template_buffer = glGenBuffers(1)
 		self.position_buffer = glGenBuffers(1)
 		self.color_buffer    = glGenBuffers(1)
@@ -100,24 +132,6 @@ class Display(object):
                              -(r+l)/(r-l), -(t+b)/(t-b), -(f+n)/(f-n), 1.0]
 
 
-	def initPolygonGraphicsData(self):
-		self.position_data  = np.array( [0.0, 0.0] * self.polygon_size, dtype=np.float16)
-
-		# Input neuron positions for graphics as 1D grid
-		for i in range(self.num_inputs):
-			index = i * 2
-			self.position_data[index    ] = 0.0 + i * (1.0 + self.POLYGON_SPACING) # x world position
-			self.position_data[index + 1] = 0.0                                    # y world position
-
-		# Layer3b neuron positions for graphics as 2D grid
-		for c in range(self.num_columns):
-			for npc in range(self.num_neurons_per_column):
-				index = ((c * self.num_neurons_per_column + npc) + self.num_inputs) * 2
-				self.position_data[index    ] = 0.0 + c   * (1.0 + self.POLYGON_SPACING) # x world position
-				self.position_data[index + 1] = 3.0 + npc * (1.0 + self.POLYGON_SPACING) # y world position
-
-		self.color_data =  np.array( [0.5, 0.5, 0.5] * self.polygon_size, dtype=np.float16)
-
 	def updateViewProjection(self):
 		self.view_matrix = [1.0,         0.0,         0.0,         0.0,
                             0.0,         1.0,         0.0,         0.0,
@@ -127,51 +141,66 @@ class Display(object):
 
 	def updatePolygonTemplate(self):
 		# Vertex locations for square polygon template
-		template_list = [-0.5,  0.5, -0.5, -0.5, 0.5, -0.5, 0.5,  0.5, -0.5,  0.5, 0.5, -0.5]
-#		template_list = [-0.0,  0.0] # For GL_POINTS
-		self.template_data = np.array(template_list, dtype=np.float16)
+		template_data = np.array(self.polygons0[0].template, dtype=np.float16)
 
 		# Opengl VBO polygon template buffer bound, filled with data, and shader variable updated
 		glBindBuffer(GL_ARRAY_BUFFER, self.template_buffer)
-		glBufferData(GL_ARRAY_BUFFER, self.template_data, GL_STATIC_DRAW)
+		glBufferData(GL_ARRAY_BUFFER, template_data, GL_STATIC_DRAW)
 		glEnableVertexAttribArray(self.shaders_template_loc)
 		glVertexAttribPointer(self.shaders_template_loc, 2, GL_HALF_FLOAT, False, 0, None)
 
 
 	def updatePolygonPositions(self):
 		# Opengl VBO polygon position buffer bound, filled with data, and shader variable updated
+		position_list = []
+		for polygon in self.polygons0:
+			position_list += polygon.position
+
+		for polygon in self.polygons1:
+			position_list += polygon.position
+
+		position_data = np.array(position_list, dtype=np.float16)
+
 		glBindBuffer(GL_ARRAY_BUFFER, self.position_buffer)
-		glBufferData(GL_ARRAY_BUFFER, self.position_data, GL_STATIC_DRAW)
+		glBufferData(GL_ARRAY_BUFFER, position_data, GL_STATIC_DRAW)
 		glEnableVertexAttribArray(self.shaders_position_loc)
 		glVertexAttribPointer(self.shaders_position_loc, 2, GL_HALF_FLOAT, False, 0, None)
 
 
+	# MAKE MORE EFFICIENT
 	def updatePolygonColors(self, inputs, layer):
+		
+		active_neurons  = [active_neuron  for active_neuron  in layer.active_neurons  if active_neuron.idx  < self.num_neurons]
+		winner_neurons  = [winner_neuron  for winner_neuron  in layer.winner_neurons  if winner_neuron.idx  < self.num_neurons]
+		predict_neurons = [predict_neuron for predict_neuron in layer.predict_neurons if predict_neuron.idx < self.num_neurons]
 
-		# Set all input and layer3b cells to Inactive (Grey)
-		self.color_data =  np.array( [0.5, 0.5, 0.5] * self.polygon_size, dtype=np.float16)
+		color_list = []
 
-		for i in range(self.num_inputs):
-			index = i * 3
-			if inputs[i] == 1:
-				self.color_data[index:index + 3] = [0.0, 1.0, 0.0] # Active (Green)
+		for polygon in self.polygons0:
+			if inputs[polygon.x_idx] == 1:
+				polygon.color = [0.0, 1.0, 0.0] # Active (Green)
+			else:
+				polygon.color = [0.5, 0.5, 0.5] # Inactive (Grey)
+			color_list += polygon.color
 
-		for active_neuron in layer.active_neurons:
-			index = (self.num_inputs + active_neuron.idx) * 3
-			self.color_data[index:index + 3] = [0.0, 1.0, 0.0] # Active (Green)
+		for polygon in self.polygons1: polygon.color = [0.5, 0.5, 0.5]
+		
+		for active_neuron in active_neurons:
+			self.polygons1[active_neuron.idx].color = [0.0, 1.0, 0.0] # Active (Green)
 
-		for winner_neuron in layer.winner_neurons:
-			index = (self.num_inputs + winner_neuron.idx) * 3
-			self.color_data[index:index + 3] = [0.0, 0.0, 1.0] # Winner (Blue)
+		for winner_neuron in winner_neurons:
+			self.polygons1[winner_neuron.idx].color = [0.0, 0.0, 1.0] # Winner (Blue) 
 
-		for predict_neuron in layer.predict_neurons:
-			index = (self.num_inputs + predict_neuron.idx) * 3
-			self.color_data[index:index + 3] = [1.0, 0.0, 1.0] # Predict (Violet)
+		for predict_neuron in predict_neurons:
+			self.polygons1[predict_neuron.idx].color = [1.0, 0.0, 1.0] # Predictr (Violet) 
 
+		for polygon in self.polygons1: color_list += polygon.color
+
+		color_data = np.array(color_list, dtype=np.float16)
 
 		# Opengl VBO polygon color buffer bound, filled with data, and shader variable updated
 		glBindBuffer(GL_ARRAY_BUFFER, self.color_buffer)
-		glBufferData(GL_ARRAY_BUFFER, self.color_data, GL_STREAM_DRAW)
+		glBufferData(GL_ARRAY_BUFFER, color_data, GL_STREAM_DRAW)
 		glEnableVertexAttribArray(self.shaders_color_loc)
 		glVertexAttribPointer(self.shaders_color_loc, 3, GL_HALF_FLOAT, True, 0, None) # normalized for unsigned char
 
@@ -190,7 +219,7 @@ class Display(object):
 		glVertexAttribDivisor(2, 1)
 
 		# Draw cells: 6 vertices per triangle, 2 triangles per square
-		glDrawArraysInstanced(GL_TRIANGLES, 0, 6*2, self.polygon_size) 
+		glDrawArraysInstanced(GL_TRIANGLES, 0, 6*2, self.num_polygons) 
 
 #		glDrawArraysInstanced(GL_POINTS, 0, 1, num_polys) 
 #		glUniform1f(shaders_scale_loc, 2.0)

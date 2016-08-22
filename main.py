@@ -6,12 +6,14 @@
 """
 TODO
 
++ Finish cleaning up graphics.py
 + Fix and finish Temporal Memory
 + Consider re-adding Synapse class to cortex.py
 + Add mouse support for graphics
 + Update README.md
 + Add better timing maybe in graphics.py?
 + For all files change tabs to spaces
++ Clean up repository (pycache)
 
 + Once Temporal Memory is complete work on 2d column topology
 + Graphics: highlight receptive fields when hovering over 2d column matrix (like in Matt's video)
@@ -92,7 +94,6 @@ def main():
 	glutIdleFunc(loop)
  
 	display.initOrthographicProjection()
-	display.initPolygonGraphicsData()
 	display.updatePolygonTemplate()
 	display.updatePolygonPositions()
 	display.runOpenglMainLoop()
