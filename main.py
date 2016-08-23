@@ -61,13 +61,27 @@ def loop():
 
 	l3b_inputs = inputs[flag]
 
-	start = time.time()
-	sp.compute(layer3b, l3b_inputs)
-#	print("Spatial Pooler Time:  {}".format(time.time() - start))
+	if display.flag == 1:
+		start = time.time()
+		sp.compute(layer3b, l3b_inputs)
+	#	print("Spatial Pooler Time:  {}".format(time.time() - start))
 
-	start = time.time()
-	tm.compute(layer3b)
-#	print("Temporal Memory Time: {}".format(time.time() - start))
+		start = time.time()
+		tm.compute(layer3b)
+	#	print("Temporal Memory Time: {}".format(time.time() - start))
+
+	#	time.sleep(1.0)
+
+		if flag == 0:
+			flag = 1
+	#	elif flag == 1:
+	#		flag = 2
+	#	elif flag == 2:
+	#		flag = 3
+	#	elif flag == 3:
+	#		flag = 4
+		else:
+			flag = 0
 
 	start = time.time()
 	display.updatePolygonColors(l3b_inputs, layer3b)
@@ -75,24 +89,11 @@ def loop():
 	display.updateScene()
 #	print("Graphics Update Time: {}".format(time.time() - start))
 
-#	time.sleep(1.0)
-
-	if flag == 0:
-		flag = 1
-#	elif flag == 1:
-#		flag = 2
-#	elif flag == 2:
-#		flag = 3
-#	elif flag == 3:
-#		flag = 4
-	else:
-		flag = 0
-
+	display.flag = 0
 
 def main():
 	glutDisplayFunc(loop)
 	glutIdleFunc(loop)
- 
 	display.initOrthographicProjection()
 	display.updatePolygonTemplate()
 	display.updatePolygonPositions()

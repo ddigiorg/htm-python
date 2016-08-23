@@ -17,8 +17,12 @@ import shader as shader
 
 
 class Polygon(object):
-	template = [-0.5,  0.5, -0.5, -0.5, 0.5, -0.5, 0.5,  0.5, -0.5,  0.5, 0.5, -0.5]
-	SPACING = 0.1
+	SIZE = 10 # in pixels
+	template = [0, SIZE, 0, 0, SIZE, 0, SIZE, SIZE, 0, SIZE, SIZE, 0]
+	SPACING = 1 # in pixels
+
+#	template = [-0.5,  0.5, -0.5, -0.5, 0.5, -0.5, 0.5,  0.5, -0.5,  0.5, 0.5, -0.5]
+#	SPACING = 0.1
 
 	def __init__(self, x_idx, y_idx, x_offset, y_offset):
 		self.x_idx = x_idx
@@ -28,8 +32,8 @@ class Polygon(object):
 		self.y_offset = y_offset
 
 		self.position = [0.0, 0.0]
-		self.position[0] = x_offset + x_idx * (1.0 + self.SPACING) # x world position
-		self.position[1] = y_offset + y_idx * (1.0 + self.SPACING) # y world position
+		self.position[0] = x_offset + x_idx * (self.SIZE + self.SPACING) # x world position
+		self.position[1] = y_offset + y_idx * (self.SIZE + self.SPACING) # y world position
 
 		self.color = [0.5, 0.5, 0.5]
 
@@ -37,6 +41,8 @@ class Display(object):
 	ESCAPE = '\x1b'
 
 	def __init__(self, window_width, window_height, num_inputs, num_columns, num_neurons_per_column):
+		self.flag = 1
+
 		# OpenGL application variables
 		self.window_width = window_width
 		self.window_height = window_height
@@ -48,8 +54,9 @@ class Display(object):
                            self.window_height)
 		glutInitWindowPosition(0, 0)                 # Application window placed at upper left corner of monitor screen
 		self.windowID = glutCreateWindow("HTM Test") # Create windowID with name "HTM"
-		glutKeyboardFunc(self.keyPressed)            # Register function when keyboard pressed
-		glutSpecialFunc(self.keyPressed)             # Register function when keyboard pressed
+		glutMouseFunc(self.mouse)                    # Register function when mouse input recieved
+		glutKeyboardFunc(self.keyboard)              # Register function when keyboard pressed
+		glutSpecialFunc(self.keyboard)               # Register function when keyboard pressed
 		glClearColor(0.0, 0.0, 0.0, 1.0)             # Black background
 
 		# Polygon variables
@@ -75,15 +82,15 @@ class Display(object):
 		self.num_neurons = self.num_columns * num_neurons_per_column
 
 		self.polygons0 = [Polygon(x_idx, 0, 0, 0) for x_idx in range(self.num_inputs)]
-		self.polygons1 = [Polygon(x_idx, y_idx, 0, 3) for x_idx in range(self.num_columns) for y_idx in range(num_neurons_per_column)]
+		self.polygons1 = [Polygon(x_idx, y_idx, 0, 30) for x_idx in range(self.num_columns) for y_idx in range(num_neurons_per_column)]
 
-		# View projection  variables
+		# View projection  variables (in pixels)
 		self.ortho_matrix = None
 		self.view_matrix  = None
-		self.view_x     = -38.0
-		self.view_y     = -10.0
-		self.view_z     = 10.0
-		self.view_speed = 0.5
+		self.view_x     = 0
+		self.view_y     = 0
+		self.view_z     = 1
+		self.view_speed = 10
 
 		# Shader variables
 		vertex_shader   = shader.compile_shader("VS")
@@ -117,14 +124,19 @@ class Display(object):
 		glBindBuffer(GL_ARRAY_BUFFER, self.color_buffer)
 		glBufferData(GL_ARRAY_BUFFER, None, GL_STREAM_DRAW)
 
+		# User Input Variables
+		self.mouse_x = 0
+		self.mouse_y = 0
+
 
 	def initOrthographicProjection(self):
-		l = 0.0
-		r = self.window_width  / 100
-		t = self.window_height / 100
-		b = 0.0
+
+		l = -self.window_width/2
+		r =  self.window_width/2
+		b = -self.window_height/2
+		t =  self.window_height/2
 		f = -1.0
-		n = 1.0
+		n =  1.0
 
 		self.ortho_matrix = [2.0/(r-l),    0.0,          0.0,          0.0,
                              0.0,          2.0/(t-b),    0.0,          0.0,
@@ -228,21 +240,32 @@ class Display(object):
 		# Flush the opengl rendering pipeline	
 		glutSwapBuffers()	
 
-	def keyPressed(self, key, x, y):
+
+	def mouse(self, button, state, x, y):
+		if button == GLUT_LEFT_BUTTON and state == GLUT_DOWN:
+			self.mouse_x = x
+			self.mouse_y = y
+
+			print(x, y)
+
+	def keyboard(self, key, x, y):
 		if key == self.ESCAPE.encode():
 			self.cleanup()
 		if key == 'a'.encode():
 			self.view_x += self.view_speed
 		if key == 'd'.encode():
 			self.view_x -= self.view_speed
-		if key == 'q'.encode():
-			self.view_y += self.view_speed
-		if key == 'e'.encode():
-			self.view_y -= self.view_speed
 		if key == 's'.encode():
-			self.view_z += self.view_speed
+			self.view_y += self.view_speed
 		if key == 'w'.encode():
-			self.view_z -= self.view_speed
+			self.view_y -= self.view_speed
+#		if key == 'q'.encode():
+#			self.view_z += self.view_speed
+#		if key == 'e'.encode():
+#			self.view_z -= self.view_speed
+		if key == 'p'.encode():
+			self.flag = 1
+
 		glutPostRedisplay()
 
 	def cleanup(self):

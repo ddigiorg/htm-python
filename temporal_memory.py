@@ -28,6 +28,9 @@ class TemporalMemory(object):
 
 		layer.computeBasalDendriteActivity(layer.active_neurons)
 
+		print( "active den: {}".format( [[dendrite.parent.idx, dendrite.idx] for dendrite in layer.active_dendrites] ) )
+		print()
+
 	# Finish coding
 	# Add learning
 	def activatePredictedColumn(self, layer):
