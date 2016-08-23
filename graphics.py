@@ -17,23 +17,23 @@ import shader as shader
 
 
 class Polygon(object):
-	SIZE = 10 # in pixels
-	template = [0, SIZE, 0, 0, SIZE, 0, SIZE, SIZE, 0, SIZE, SIZE, 0]
-	SPACING = 1 # in pixels
+	# in pixels
+	PADDING_X = 10
+	PADDING_Y = 100
+	POLY_SIZE = 10
+	SPACING   = 1
+	TEMPLATE  = [0, POLY_SIZE, 0, 0, POLY_SIZE, 0, POLY_SIZE, POLY_SIZE, 0, POLY_SIZE, POLY_SIZE, 0]
 
-#	template = [-0.5,  0.5, -0.5, -0.5, 0.5, -0.5, 0.5,  0.5, -0.5,  0.5, 0.5, -0.5]
-#	SPACING = 0.1
+	def __init__(self, idx_x, idx_y, offset_x, offset_y):
+		self.idx_x = idx_x
+		self.idx_y = idx_y
 
-	def __init__(self, x_idx, y_idx, x_offset, y_offset):
-		self.x_idx = x_idx
-		self.y_idx = y_idx
-
-		self.x_offset = x_offset
-		self.y_offset = y_offset
+		self.offset_x = offset_x
+		self.offset_y = offset_y
 
 		self.position = [0.0, 0.0]
-		self.position[0] = x_offset + x_idx * (self.SIZE + self.SPACING) # x world position
-		self.position[1] = y_offset + y_idx * (self.SIZE + self.SPACING) # y world position
+		self.position[0] = self.PADDING_X + offset_x + idx_x * (self.POLY_SIZE + self.SPACING) # x world position
+		self.position[1] = self.PADDING_Y + offset_y + idx_y * (self.POLY_SIZE + self.SPACING) # y world position
 
 		self.color = [0.5, 0.5, 0.5]
 
@@ -131,16 +131,16 @@ class Display(object):
 
 	def initOrthographicProjection(self):
 
-		l = -self.window_width/2
-		r =  self.window_width/2
-		b = -self.window_height/2
-		t =  self.window_height/2
+		l =  0.0
+		r =  self.window_width
+		b =  0.0
+		t =  self.window_height
 		f = -1.0
 		n =  1.0
 
 		self.ortho_matrix = [2.0/(r-l),    0.0,          0.0,          0.0,
                              0.0,          2.0/(t-b),    0.0,          0.0,
-                             0,0,          0.0,          -2.0/(f-n),   0.0,
+                             0.0,          0.0,          -2.0/(f-n),   0.0,
                              -(r+l)/(r-l), -(t+b)/(t-b), -(f+n)/(f-n), 1.0]
 
 
@@ -153,7 +153,7 @@ class Display(object):
 
 	def updatePolygonTemplate(self):
 		# Vertex locations for square polygon template
-		template_data = np.array(self.polygons0[0].template, dtype=np.float16)
+		template_data = np.array(self.polygons0[0].TEMPLATE, dtype=np.float16)
 
 		# Opengl VBO polygon template buffer bound, filled with data, and shader variable updated
 		glBindBuffer(GL_ARRAY_BUFFER, self.template_buffer)
@@ -189,22 +189,22 @@ class Display(object):
 		color_list = []
 
 		for polygon in self.polygons0:
-			if inputs[polygon.x_idx] == 1:
-				polygon.color = [0.0, 1.0, 0.0] # Active (Green)
+			if inputs[polygon.idx_x] == 1:
+				polygon.color = [0.0, 0.8, 0.0] # Active (Green)
 			else:
-				polygon.color = [0.5, 0.5, 0.5] # Inactive (Grey)
+				polygon.color = [0.2, 0.2, 0.2] # Inactive (Grey)
 			color_list += polygon.color
 
-		for polygon in self.polygons1: polygon.color = [0.5, 0.5, 0.5]
+		for polygon in self.polygons1: polygon.color = [0.2, 0.2, 0.2]
 		
 		for active_neuron in active_neurons:
-			self.polygons1[active_neuron.idx].color = [0.0, 1.0, 0.0] # Active (Green)
+			self.polygons1[active_neuron.idx].color = [0.0, 0.8, 0.0] # Active (Green)
 
 		for winner_neuron in winner_neurons:
-			self.polygons1[winner_neuron.idx].color = [0.0, 0.0, 1.0] # Winner (Blue) 
+			self.polygons1[winner_neuron.idx].color = [0.0, 0.0, 0.8] # Winner (Blue) 
 
 		for predict_neuron in predict_neurons:
-			self.polygons1[predict_neuron.idx].color = [1.0, 0.0, 1.0] # Predictr (Violet) 
+			self.polygons1[predict_neuron.idx].color = [0.8, 0.0, 0.8] # Predict (Violet) 
 
 		for polygon in self.polygons1: color_list += polygon.color
 

@@ -6,6 +6,7 @@
 """
 TODO
 
++ Make origin top left of screen
 + Finish cleaning up graphics.py
 + Fix and finish Temporal Memory
 + Consider re-adding Synapse class to cortex.py
