@@ -7,7 +7,9 @@
 TODO
 
 + Make origin top left of screen
-+ Finish cleaning up graphics.py
++ Put Camera() and Scene() into OpenGLRenderer() or make seperate Renderer() class
++ Standardize OpenGLRenderer() methods
++ Consider making template a uniform matrix
 + Fix and finish Temporal Memory
 + Consider re-adding Synapse class to cortex.py
 + Add mouse support for graphics
@@ -22,7 +24,6 @@ TODO
 
 from OpenGL.GL import *
 from OpenGL.GLUT import *
-#from OpenGL.GLU import * # <-- uneeded so delete when finished
 
 import graphics
 import cortex
@@ -32,10 +33,14 @@ import temporal_memory
 import numpy as np
 import time
 
-# Cortex global variables
-num_inputs  = 2048#50
-num_columns = 2048#50
-num_neurons_per_column = 32#8
+# Application variables
+window_width  = 800
+window_height = 600
+
+# Cortex variables
+num_inputs  = 2048
+num_columns = 2048
+num_neurons_per_column = 32
 
 # Input state setup
 inputs = np.zeros((5, num_inputs), dtype=np.int8)
@@ -46,7 +51,10 @@ inputs[3, 15:20] = 1
 inputs[4, 20:25] = 1
 
 # Class initializations
-display = graphics.Display(800, 600, num_inputs, num_columns, num_neurons_per_column)
+#gRender = graphics.Renderer()
+gScene  = graphics.Scene(num_inputs, num_columns, num_neurons_per_column)
+gCamera = graphics.Camera(window_width, window_height)
+gRender = graphics.OpenGLRenderer(gCamera)
 
 start = time.time()
 layer3b = cortex.Layer3b(num_inputs, num_columns, num_neurons_per_column)
@@ -62,14 +70,14 @@ def loop():
 
 	l3b_inputs = inputs[flag]
 
-	if display.flag == 1:
+	if gRender.flag == 1:
 		start = time.time()
 		sp.compute(layer3b, l3b_inputs)
-	#	print("Spatial Pooler Time:  {}".format(time.time() - start))
+		print("Spatial Pooler Time:  {}".format(time.time() - start))
 
 		start = time.time()
 		tm.compute(layer3b)
-	#	print("Temporal Memory Time: {}".format(time.time() - start))
+		print("Temporal Memory Time: {}".format(time.time() - start))
 
 	#	time.sleep(1.0)
 
@@ -85,19 +93,31 @@ def loop():
 			flag = 0
 
 	start = time.time()
-	display.updatePolygonColors(l3b_inputs, layer3b)
-	display.updateViewProjection()
-	display.updateScene()
+	color_list = gScene.polygonColors(l3b_inputs, layer3b)
+	gRender.updateColorVBO(color_list)
+
+	view_matrix = gCamera.updateView()
+	gRender.updateViewMatrix(view_matrix)
+
+	gRender.drawScene( int(len(color_list)/3) )
+
 #	print("Graphics Update Time: {}".format(time.time() - start))
 
-	display.flag = 0
+	gRender.flag = 0
 
 def main():
 	glutDisplayFunc(loop)
 	glutIdleFunc(loop)
-	display.initOrthographicProjection()
-	display.updatePolygonTemplate()
-	display.updatePolygonPositions()
-	display.runOpenglMainLoop()
+
+	proj_matrix = gCamera.initOrthographicProjection()
+	gRender.updateProjectionMatrix(proj_matrix)
+
+	template_list = gScene.polygonTemplate()
+	gRender.updateTemplateVBO(template_list)
+
+	position_list = gScene.polygonPositions()
+	gRender.updatePositionVBO(position_list)
+
+	glutMainLoop()
 
 main()
