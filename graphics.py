@@ -6,90 +6,177 @@ from OpenGL.GLUT import *
 import numpy as np
 import shader as shader
 
+class Render(object):
+	def __init__(self, window_width, window_height, arrays):
+		self.scene = Scene(arrays)
+		self.camera = Camera(window_width, window_height)
+		self.oglRenderer = OpenGLRenderer(window_width, window_height)
+
+		self.ESCAPE = '\x1b'
+		self.flag = 1
+		glutMouseFunc(self.mouseFunc)       # Register function when mouse input recieved
+		glutKeyboardFunc(self.keyboardFunc) # Register function when keyboard pressed
+		glutSpecialFunc(self.keyboardFunc)  # Register function when keyboard pressed
+
+	def mouseFunc(self, button, state, x, y):
+		if button == GLUT_LEFT_BUTTON and state == GLUT_DOWN:
+			camera   = self.camera
+			scene    = self.scene
+			polygons = scene.polygons[1]
+
+			selected = False
+			for polygon in polygons:
+				lower_x = polygon.position[0] + camera.view_x
+				upper_x = lower_x + polygon.size
+				lower_y = polygon.position[1] + camera.view_y
+				upper_y = lower_y + polygon.size
+
+				if lower_x <= x <= upper_x and lower_y <= y <= upper_y:
+					scene.selected_polygon = polygon
+					selected = True
+
+			if not selected:
+				scene.selected_polygon = None
+
+	def keyboardFunc(self, key, x, y):
+		camera = self.camera
+		oglRenderer = self.oglRenderer
+
+		if key == self.ESCAPE.encode():
+			oglRenderer.cleanUp()
+		if key == 'a'.encode():
+			camera.view_x += camera.view_speed
+		if key == 'd'.encode():
+			camera.view_x -= camera.view_speed
+		if key == 'w'.encode():
+			camera.view_y += camera.view_speed
+		if key == 's'.encode():
+			camera.view_y -= camera.view_speed
+		if key == 'p'.encode():
+			self.flag = 1
+
+		glutPostRedisplay()
+
+	def load(self):
+		camera = self.camera
+		scene  = self.scene
+		oglRenderer = self.oglRenderer
+
+		proj_matrix   = camera.initOrthographicProjection()
+		template_list = scene.polygonTemplate()
+		position_list = scene.polygonPositions()
+
+		oglRenderer.updateProjectionMatrix(proj_matrix)
+		oglRenderer.updateTemplateVBO(template_list)
+		oglRenderer.updatePositionVBO(position_list)
+		 
+	def load2(self, stuff):
+		camera = self.camera
+		scene  = self.scene
+		oglRenderer = self.oglRenderer
+
+		view_matrix = camera.updateView()
+		color_list  = scene.polygonColors(stuff) # MAKE BETTER
+
+		oglRenderer.updateViewMatrix(view_matrix)
+		oglRenderer.updateColorVBO(color_list)
+
+		oglRenderer.drawScene( int(len(color_list)/3) )
+
+
 class Square(object):
-	def __init__(self, idx_x, idx_y, size):
+	def __init__(self, start_x, start_y, idx_x, idx_y, size, spacing):
 		self.idx_x = idx_x
 		self.idx_y = idx_y
-		self.template = [0, size, 0, 0, size, 0, size, size, 0, size, size, 0]
-		self.position = [0.0, 0.0] #xy
-		self.color    = [0.0, 0.0, 0.0] #rgb
+		self.start_x = start_x
+		self.start_y = start_y
+		self.size = size
+
+		self.shape = [0, size, 0, 0, size, 0, size, size, 0, size, size, 0]
+
+		self.position = [start_x + idx_x * (size + spacing), # x in pixels
+                         start_y + idx_y * (size + spacing)] # y in pixels
+
+		self.color = [0.0, 0.0, 0.0] #rgb
 
 
 class Scene(object):
-	def __init__(self, num_inputs, num_columns, num_neurons_per_column):
+	def __init__(self, arrays):
 		MAX_NUM_POLYS_X = 70
 
-		if num_inputs > MAX_NUM_POLYS_X:
-			self.num_inputs = MAX_NUM_POLYS_X
-		else:
-			self.num_inputs = num_inputs
+		self.polygons = []
 
-		if num_columns > MAX_NUM_POLYS_X:
-			self.num_columns = MAX_NUM_POLYS_X
-		else:
-			self.num_columns = num_columns
+		self.selected_polygon = None
 
-		self.num_neurons = self.num_columns * num_neurons_per_column
-		self.num_polygons = self.num_inputs + self.num_neurons
+		for array in arrays:
+			start_x = array[0]
+			start_y = array[1]
+			num_x   = array[2]
+			num_y   = array[3]
+			size    = array[4]
+			spacing = array[5]
 
-		self.SIZE = 10  # Pixels
+			if num_x > MAX_NUM_POLYS_X:
+				num_x = MAX_NUM_POLYS_X
 
-		self.squares0 = [Square(x_idx, 0, self.SIZE)
-                         for x_idx in range(self.num_inputs)]
-
-		self.squares1 = [Square(x_idx, y_idx, self.SIZE)
-                         for x_idx in range(self.num_columns)
-                         for y_idx in range(num_neurons_per_column)]
+			self.polygons.append([Square(start_x, start_y, idx_x, idx_y, size, spacing)
+                                  for idx_x in range(num_x)
+                                  for idx_y in range(num_y)])
 
 	def polygonTemplate(self):
-		return self.squares0[0].template
+		return self.polygons[0][0].shape
 
 	def polygonPositions(self):
-		PADDING_X = 10  # Pixels
-		PADDING_Y = 100 # Pixels
-		SPACING   = 1   # Pixel
-
 		position_list = []
-		for square in self.squares0:
-			square.position = [PADDING_X + square.idx_x * (self.SIZE + SPACING),  
-                               PADDING_Y + square.idx_y * (self.SIZE + SPACING)]
-			position_list += square.position
-
-		for square in self.squares1:
-			square.position = [PADDING_X      + square.idx_x * (self.SIZE + SPACING),  
-                               PADDING_Y + 30 + square.idx_y * (self.SIZE + SPACING)]
-			position_list += square.position
+		for polygons in self.polygons:
+			for polygon in polygons:
+				position_list += polygon.position
 
 		return position_list
 
-	def polygonColors(self, inputs, layer):
-		active_neurons  = [active_neuron  for active_neuron  in layer.active_neurons  if active_neuron.idx  < self.num_neurons]
-		winner_neurons  = [winner_neuron  for winner_neuron  in layer.winner_neurons  if winner_neuron.idx  < self.num_neurons]
-		predict_neurons = [predict_neuron for predict_neuron in layer.predict_neurons if predict_neuron.idx < self.num_neurons]
+	def polygonColors(self, stuff):
+		inputs = stuff[0]
+		layer = stuff[1]
+
+		active_neurons  = [active_neuron  for active_neuron  in layer.active_neurons  if active_neuron.idx  < len(self.polygons[1]) ]
+		winner_neurons  = [winner_neuron  for winner_neuron  in layer.winner_neurons  if winner_neuron.idx  < len(self.polygons[1]) ]
+		predict_neurons = [predict_neuron for predict_neuron in layer.predict_neurons if predict_neuron.idx < len(self.polygons[1]) ]
 
 		color_list = []
 
-		for square in self.squares0:
-			if inputs[square.idx_x] == 1:
-				square.color = [0.0, 0.8, 0.0] # Active (Green)
+		for polygon in self.polygons[0]:
+			if inputs[polygon.idx_x] == 1:
+				polygon.color = [0.0, 0.8, 0.0] # Active (Green)
 			else:
-				square.color = [0.2, 0.2, 0.2] # Inactive (Grey)
-			color_list += square.color
+				polygon.color = [0.2, 0.2, 0.2] # Inactive (Grey)
+			color_list += polygon.color
 
-		for square in self.squares1:
-			square.color = [0.2, 0.2, 0.2]
+		for polygon in self.polygons[1]:
+			polygon.color = [0.2, 0.2, 0.2]
 		
 		for active_neuron in active_neurons:
-			self.squares1[active_neuron.idx].color = [0.0, 0.8, 0.0] # Active (Green)
+			self.polygons[1][active_neuron.idx].color = [0.0, 0.8, 0.0] # Active (Green)
 
 		for winner_neuron in winner_neurons:
-			self.squares1[winner_neuron.idx].color = [0.0, 0.0, 0.8] # Winner (Blue) 
+			self.polygons[1][winner_neuron.idx].color = [0.0, 0.0, 0.8] # Winner (Blue) 
 
 		for predict_neuron in predict_neurons:
-			self.squares1[predict_neuron.idx].color = [0.8, 0.0, 0.8] # Predict (Violet) 
+			self.polygons[1][predict_neuron.idx].color = [0.8, 0.0, 0.8] # Predict (Violet) 
 
-		for square in self.squares1:
-			color_list += square.color
+		selected_polygon = self.selected_polygon
+		if selected_polygon:
+			#selected_polygon.color[0] += 0.2
+			#selected_polygon.color[1] += 0.2
+			#selected_polygon.color[2] += 0.2
+			idx_x = selected_polygon.idx_x
+			idx_y = selected_polygon.idx_y
+			neuron = layer.columns[idx_x].neurons[idx_y]
+			synapses = [basal_dendrite.synapse_addresses for basal_dendrite in neuron.basal_dendrites]
+			print(synapses)
+			self.selected_polygon = None
+
+		for polygon in self.polygons[1]:
+			color_list += polygon.color
 
 		return color_list
 
@@ -109,10 +196,12 @@ class Camera(object):
 		self.view_matrix = None
 
 	def initOrthographicProjection(self):
+		"""Initialize 2D projection with top left pixel as origin"""
+
 		l =  0.0
 		r =  self.window_width
-		b =  0.0
-		t =  self.window_height
+		b =  self.window_height
+		t =  0.0
 		f = -1.0
 		n =  1.0
 
@@ -133,25 +222,19 @@ class Camera(object):
 
 
 class OpenGLRenderer(object):
-	ESCAPE = '\x1b'
-
-	def __init__(self, camera_instance):
-		self.flag = 1
-
-		camera = camera_instance
-		window_width  = camera.window_width
-		window_height = camera.window_height
-
+	def __init__(self, window_width, window_height):
 		# Opengl Initilization
 		glutInit()                                      # Initialize opengl
 		glutInitDisplayMode(GLUT_RGBA)                  # RGBA color
 		glutInitWindowSize(window_width, window_height) # Initialize window size
 		glutInitWindowPosition(0, 0)                    # Application window placed at upper left corner of monitor screen
 		self.windowID = glutCreateWindow("HTM Test")    # Create windowID with name
-		glutMouseFunc(self.mouseFunc)                   # Register function when mouse input recieved
-		glutKeyboardFunc(self.keyboardFunc)             # Register function when keyboard pressed
-		glutSpecialFunc(self.keyboardFunc)              # Register function when keyboard pressed
 		glClearColor(0.0, 0.0, 0.0, 1.0)                # Black background
+
+		# VBO variables
+		self.template_buffer = glGenBuffers(1)
+		self.position_buffer = glGenBuffers(1)
+		self.color_buffer    = glGenBuffers(1)
 
 		# Shader variables
 		vertex_shader   = shader.compile_shader("VS")
@@ -166,15 +249,6 @@ class OpenGLRenderer(object):
 		self.shaders_scale_loc    = glGetUniformLocation(self.shaders_programID, "polygon_scale"   )
 		self.shaders_proj_loc     = glGetUniformLocation(self.shaders_programID, "projection"      )
 		self.shaders_view_loc     = glGetUniformLocation(self.shaders_programID, "view"            )
-
-		# VBO variables
-		self.template_buffer = glGenBuffers(1)
-		self.position_buffer = glGenBuffers(1)
-		self.color_buffer    = glGenBuffers(1)
-
-		# User Input Variables
-		self.mouse_x = 0
-		self.mouse_y = 0
 
 	def updateTemplateVBO(self, template_list):
 		# Opengl VBO polygon template buffer bound, filled with data, and shader variable updated
@@ -223,29 +297,6 @@ class OpenGLRenderer(object):
 
 		# Flush the opengl rendering pipeline	
 		glutSwapBuffers()	
-
-	def mouseFunc(self, button, state, x, y):
-		if button == GLUT_LEFT_BUTTON and state == GLUT_DOWN:
-			self.mouse_x = x
-			self.mouse_y = y
-
-			print(x, y)
-
-	def keyboardFunc(self, key, x, y):
-		if key == self.ESCAPE.encode():
-			self.cleanUp()
-		if key == 'a'.encode():
-			self.camera.view_x += self.camera.view_speed
-		if key == 'd'.encode():
-			self.camera.view_x -= self.camera.view_speed
-		if key == 's'.encode():
-			self.camera.view_y += self.camera.view_speed
-		if key == 'w'.encode():
-			self.camera.view_y -= self.camera.view_speed
-		if key == 'p'.encode():
-			self.flag = 1
-
-		glutPostRedisplay()
 
 	def cleanUp(self):
 		glDisableVertexAttribArray(self.shaders_template_loc)
