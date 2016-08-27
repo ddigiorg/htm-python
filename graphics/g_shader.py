@@ -1,9 +1,4 @@
-# archlinux: certain opengl functions won't work on Windows without extensive tinkering
-# python 3.5.1
-# pyopengl 3.0 Mesa 11.1.2
-# glsl 1.30
-
-# http://cyrille.rossant.net/shaders-opengl/
+# g_shader.py
 
 from OpenGL.GL import *
 
@@ -11,23 +6,21 @@ from OpenGL.GL import *
 VertexShader = """
 #version 130
 
-in vec2 polygon_template; //xy
-in vec2 polygon_position; //xy
-in vec3 polygon_color;    //rgb
+in vec2 mesh; //xy
+in vec2 position; //xy
+in vec3 color;    //rgb
 
 out vec3 colorVS;
 
-uniform float polygon_scale;
 uniform mat4 projection;
 uniform mat4 view;
 
 void main()
 {
-	vec2 vertex_position = polygon_template.xy + polygon_position.xy;
-	vertex_position *= polygon_scale;
-	gl_Position = projection * view * vec4(vertex_position, 0.0f, 1.0f);
+	vec2 vertex = mesh.xy + position.xy;
+	gl_Position = projection * view * vec4(vertex, 0.0f, 1.0f);
 
-	colorVS = polygon_color;
+	colorVS = color;
 }
 """
 

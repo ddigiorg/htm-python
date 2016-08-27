@@ -1,8 +1,3 @@
-# archlinux: certain opengl functions won't work on Windows without extensive tinkering
-# python 3.5.1
-# pyopengl 3.0 Mesa 11.1.2
-# glsl 1.30
-
 """
 TODO
 
@@ -10,94 +5,66 @@ TODO
 + Consider putting Camera() in a seperate python file
 + Standardize OpenGLRenderer() methods
 + Consider making template a uniform matrix
++ Add learning to spatial pooler
 + Fix and finish Temporal Memory
 + Consider re-adding Synapse class to cortex.py
-+ Add mouse support for graphics
 + Update README.md
 + Add better timing maybe in graphics.py?
 + For all files change tabs to spaces
 + Clean up repository (pycache)
-
-+ Once Temporal Memory is complete work on 2d column topology
++ Complete 2d column topology
 + Graphics: highlight receptive fields when hovering over 2d column matrix (like in Matt's video)
 """
 
-from OpenGL.GL import *
-from OpenGL.GLUT import *
+from OpenGL.GL import *   # !REMOVE STARS!
+from OpenGL.GLUT import * # !REMOVE STARS!
 
-import graphics
-import cortex
-import spatial_pooler
-import temporal_memory
+import graphics.g_main as g_main
+import htm.encoder as encoder
+import htm.cortex as cortex
+import htm.spatial_pooler as spatial_pooler
+import htm.temporal_memory as temporal_memory
 
 import numpy as np
 import time
 
-# Application variables
-window_width  = 800
-window_height = 600
-
 # Cortex variables
-num_inputs  = 50#2048
-num_columns = 50#2048
-num_neurons_per_column = 3#32
+numInputsX = 25 #2048
+numInputsY = 25
+numColumnsX = numInputsX
+numColumnsY = numInputsY
+numNeuronsPerColumn = 3 #32
 
-# Input state setup
-inputs = np.zeros((5, num_inputs), dtype=np.int8)
-inputs[0,  0: 5] = 1
-inputs[1,  5:10] = 1
-inputs[2, 10:15] = 1
-inputs[3, 15:20] = 1
-inputs[4, 20:25] = 1
-
-arrays = [[10, 400, num_inputs,  1,                      10, 1],
-          [10, 10,  num_columns, num_neurons_per_column, 10, 1]]
+dimensions = ( numInputsX, numInputsY, numColumnsX, numColumnsY, numNeuronsPerColumn )
 
 # Class initializations
-gRender = graphics.Render(window_width, window_height, arrays)
-
-start = time.time()
-layer3b = cortex.Layer3b(num_inputs, num_columns, num_neurons_per_column)
-print("Layer3b Init Time: {}".format(time.time() - start))
-
+encode = encoder.Encoder( dimensions[0], dimensions[1] )
+layer3b = cortex.Layer3b( dimensions )
 sp = spatial_pooler.SpatialPooler()
-tm = temporal_memory.TemporalMemory()
+#tm = temporal_memory.TemporalMemory()
 
 flag = 0
+
+layer = None
 
 def loop():
 	global flag
 
-	l3b_inputs = inputs[flag]
+	sp.compute(encode.inputs, layer3b)
+#	tm.compute(layer3b)
+	#time.sleep(1.0)
 
-	if gRender.flag == 1:
-		start = time.time()
-		sp.compute(layer3b, l3b_inputs)
-#		print("Spatial Pooler Time:  {}".format(time.time() - start))
+	if flag == 0:
+		flag = 1
+	else:
+		flag = 0
 
-		start = time.time()
-		tm.compute(layer3b)
-#		print("Temporal Memory Time: {}".format(time.time() - start))
-
-	#	time.sleep(1.0)
-
-		if flag == 0:
-			flag = 1
-		else:
-			flag = 0
-
-	start = time.time()
-	gRender.load2( (l3b_inputs, layer3b) )
-#	print("Graphics Update Time: {}".format(time.time() - start))
-
-	gRender.flag = 0
+	g_main.updateGraphics()
 
 def main():
-	glutDisplayFunc(loop)
-	glutIdleFunc(loop)
-
-	gRender.load()
-
+	g_main.initGraphics( dimensions, encode, layer3b )
+	glutDisplayFunc( loop )
+	glutIdleFunc( loop )
 	glutMainLoop()
 
 main()
