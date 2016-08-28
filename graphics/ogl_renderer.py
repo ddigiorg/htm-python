@@ -48,30 +48,44 @@ def init():
 	OpenGLParams.shaderProjectionMatrixLocation = glGetUniformLocation( shaderID, "projection" )
 	OpenGLParams.shaderViewMatrixLocation = glGetUniformLocation( shaderID, "view" )
 
-def updateVBO( shaderLocation, vboBuffer, vboList, size, usageType ):
-	if usageType == "stream": vboUsage = GL_STREAM_DRAW
-	elif usageType == "static": vboUsage = GL_STATIC_DRAW
+def updateVBO( shaderLocation, vboBuffer, vboList, size ):
+	mesh = OpenGLParams.shaderMeshLocation
+	position = OpenGLParams.shaderPositionLocation
+	color = OpenGLParams.shaderColorLocation
+
+	if shaderLocation == mesh:
+		usage = GL_STATIC_DRAW
+		divisor = 0
+	elif shaderLocation == position:
+		usage = GL_STATIC_DRAW
+		divisor = 1
+	elif shaderLocation == color:
+		usage = GL_STREAM_DRAW
+		divisor = 1
 
 	vboData = np.array(vboList, dtype=np.float16)
 	glBindBuffer(GL_ARRAY_BUFFER, vboBuffer)
-	glBufferData(GL_ARRAY_BUFFER, vboData, vboUsage)
+	glBufferData(GL_ARRAY_BUFFER, vboData, usage)
 	glEnableVertexAttribArray( shaderLocation )
 	glVertexAttribPointer( shaderLocation, size, GL_HALF_FLOAT, False, 0, None)
+	glVertexAttribDivisor( shaderLocation, divisor )
 	
 def updateUniformMatrix( shaderLocation, matrix ):
 	glUniformMatrix4fv( shaderLocation, 1, False, matrix )
 
-def draw( num_polygons ):
+#!CONSIDER MAKING drawTriangles and drawLines instead of just 1
+def draw(drawType, num_polygons ):
+	if drawType == "triangles":
+		drawMode = GL_TRIANGLES
+	elif drawType == "line_strip":
+		drawMode = GL_LINE_STRIP
+		glLineWidth(2)
+
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT )
 
-	# * ?????????? For instancing... figure out what this does
-	glVertexAttribDivisor( 0, 0 )
-	glVertexAttribDivisor( 1, 1 )
-	glVertexAttribDivisor( 2, 1 )
-
 	# make a variable for the vertices (probably from template)
-	# Draw cells: 6 vertices per triangle, 2 triangles per square
-	glDrawArraysInstanced( GL_TRIANGLES, 0, 6*2, num_polygons )
+	# Draw cells: 6 vertices per triangle, 2 triangles per square !MAKE A VARIABLE!
+	glDrawArraysInstanced( drawMode, 0, 6*2, num_polygons )
 
 	# Flush the opengl rendering pipeline   
 	glutSwapBuffers()

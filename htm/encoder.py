@@ -8,7 +8,7 @@ class Encoder( object ):
 		self.numInputsY = numInputsY
 
 		self.inputs = np.zeros( ( numInputsY * numInputsX ), dtype=np.int8 )
-		self.inputs[0: 5] = 1 
+		self.inputs[45: 50] = 1 
 
 #		self.inputs[0,  0: 5] = 1 
 #		self.inputs[1,  5:10] = 1 

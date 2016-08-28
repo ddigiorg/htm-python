@@ -1,19 +1,15 @@
 """
 TODO
-
-+ Clean graphics code
-+ Consider putting Camera() in a seperate python file
-+ Standardize OpenGLRenderer() methods
-+ Consider making template a uniform matrix
-+ Add learning to spatial pooler
++ Graphics: highlight receptive fields when hovering over 2d column matrix (like in Matt's video)
 + Fix and finish Temporal Memory
++ Complete 2d column topology
 + Consider re-adding Synapse class to cortex.py
 + Update README.md
-+ Add better timing maybe in graphics.py?
++ Add learning to spatial pooler
++ Add better timing maybe in graphics?
++ Clean entire code!  Make standardize class, function, and variable names to a convention
 + For all files change tabs to spaces
 + Clean up repository (pycache)
-+ Complete 2d column topology
-+ Graphics: highlight receptive fields when hovering over 2d column matrix (like in Matt's video)
 """
 
 from OpenGL.GL import *   # !REMOVE STARS!
@@ -52,7 +48,7 @@ def loop():
 
 	sp.compute(encode.inputs, layer3b)
 #	tm.compute(layer3b)
-	#time.sleep(1.0)
+	time.sleep(0.05)
 
 	if flag == 0:
 		flag = 1

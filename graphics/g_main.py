@@ -24,14 +24,12 @@ def initGraphics( dimensions, encoder, layer ):
 	ogl_renderer.updateVBO( OpenGLParams.shaderMeshLocation,
                             OpenGLParams.meshBuffer,
                             meshList,
-                            2,
-                            "static" )
+                            2 )
 
 	ogl_renderer.updateVBO( OpenGLParams.shaderPositionLocation,
                             OpenGLParams.positionBuffer,
                             positionList,
-                            2,
-                            "static" )
+                            2, )
 
 def updateGraphics():
 	assemblies = SceneParams.assemblies
@@ -50,10 +48,11 @@ def updateGraphics():
 	ogl_renderer.updateVBO( OpenGLParams.shaderColorLocation,
                             OpenGLParams.colorBuffer,
                             colorList,
-                            3,
-                            "stream" )
+                            3 )
+
 	numPolygons = int( len( colorList ) / 3 )
-	ogl_renderer.draw( numPolygons )
+	ogl_renderer.draw( "triangles", numPolygons )
+#	ogl_renderer.draw( "line_strip", numPolygons )
 
 	if Flags.cleanGraphics == True: cleanGraphics()
 
@@ -110,10 +109,6 @@ def initOrthogonalProjection():
 def updateView():
 	viewMatrix = ViewParams.viewMatrix
 
-	viewMatrix[12] += ViewParams.viewUpdateX
-	viewMatrix[13] += ViewParams.viewUpdateY
-	viewMatrix[14] += ViewParams.viewUpdateZ
-
-	ViewParams.viewUpdateX = 0.0
-	ViewParams.viewUpdateY = 0.0
-	ViewParams.viewUpdateZ = 0.0
+	viewMatrix[12] = ViewParams.viewX
+	viewMatrix[13] = ViewParams.viewY
+	viewMatrix[14] = ViewParams.viewZ

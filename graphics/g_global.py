@@ -9,10 +9,10 @@ class ViewParams(object):
 	viewportWidth = 800
 	viewportHeight = 800
 
-	viewUpdateX = 0.0
-	viewUpdateY = 0.0
-	viewUpdateZ = 0.0
-	viewUpdatesSpeed = 10.0
+	viewX = 0.0
+	viewY = 0.0
+	viewZ = 0.0
+	viewSpeed = 10.0
 
 	viewMatrix = [1.0, 0.0, 0.0, 0.0,
                   0.0, 1.0, 0.0, 0.0,
@@ -23,6 +23,8 @@ class ViewParams(object):
 
 class SceneParams(object):
 	assemblies = []
+	selectedAssembly = None
+	selectedPolygon = None
 
 class OpenGLParams(object):
 	windowID = None

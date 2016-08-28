@@ -2,40 +2,35 @@
 
 from OpenGL.GL import *
 from OpenGL.GLUT import *
-from graphics.g_global import Flags, ViewParams
+from graphics.g_global import Flags, ViewParams, SceneParams
 
 ESCAPE = '\x1b'
 
-def mouseFunc(button, state, x, y):
+def mouseFunc( button, state, x, y ):
 	if button == GLUT_LEFT_BUTTON and state == GLUT_DOWN:
-		print(x, y)
+		selected = False
+		for assembly in SceneParams.assemblies:
+			for polygon in assembly.polygons:
+				lower_x = polygon.position[0] + ViewParams.viewX
+				upper_x = lower_x + polygon.size
+				lower_y = polygon.position[1] + ViewParams.viewY
+				upper_y = lower_y + polygon.size
 
-# 22         if button == GLUT_LEFT_BUTTON and state == GLUT_DOWN:
-# 23             camera   = self.camera
-# 24             scene    = self.scene
-# 25             polygons = scene.polygons[1]
-# 26 
-# 27             selected = False
-# 28             for polygon in polygons:
-# 29                 lower_x = polygon.position[0] + camera.view_x
-# 30                 upper_x = lower_x + polygon.size
-# 31                 lower_y = polygon.position[1] + camera.view_y
-# 32                 upper_y = lower_y + polygon.size
-# 33 
-# 34                 if lower_x <= x <= upper_x and lower_y <= y <= upper_y:
-# 35                     scene.selected_polygon = polygon
-# 36                     selected = True
-# 37 
-# 38             if not selected:
-# 39                 scene.selected_polygon = None
+				if lower_x <= x <= upper_x and lower_y <= y <= upper_y:
+					SceneParams.selectedAssembly = assembly
+					SceneParams.selectedPolygon = polygon
+					selected = True
 
+				if not selected:
+					SceneParams.selectedAssembly = None
+					SceneParams.selectedPolygon = None
 
-def keyboardFunc(key, x, y):
+def keyboardFunc( key, x, y ):
 	if key == ESCAPE.encode(): Flags.cleanGraphics = True
-	if key == 'a'.encode(): ViewParams.viewUpdateX += ViewParams.viewUpdatesSpeed
-	if key == 'd'.encode(): ViewParams.viewUpdateX -= ViewParams.viewUpdatesSpeed
-	if key == 'w'.encode(): ViewParams.viewUpdateY += ViewParams.viewUpdatesSpeed
-	if key == 's'.encode(): ViewParams.viewUpdateY -= ViewParams.viewUpdatesSpeed
-	if key == 'p'.encode(): print("put continue flag here")
+	if key == 'a'.encode(): ViewParams.viewX += ViewParams.viewSpeed
+	if key == 'd'.encode(): ViewParams.viewX -= ViewParams.viewSpeed
+	if key == 'w'.encode(): ViewParams.viewY += ViewParams.viewSpeed
+	if key == 's'.encode(): ViewParams.viewY -= ViewParams.viewSpeed
+	if key == 'p'.encode(): print( "put continue flag here" )
 
 	glutPostRedisplay()

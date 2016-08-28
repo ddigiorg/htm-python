@@ -28,7 +28,7 @@ def initScene( dimensions, encoder, layer ):
 
 	dataType[1] = "columns"
 	data[1] = layer.columns
-	x[1] = ViewParams.viewportWidth / 2 + 10
+	x[1] = int( ViewParams.viewportWidth / 2 + 10 )
 	y[1] = 10
 	numX[1] = dimensions[2] # numColumnsX
 	numY[1] = dimensions[3] # numColumnsY
@@ -36,7 +36,7 @@ def initScene( dimensions, encoder, layer ):
 	# Neurons
 #	dataType[2] = "neurons"
 #	x[2] = 10
-#	y[2] = ViewParams.viewportHeight / 2 + 10
+#	y[2] = int( ViewParams.viewportHeight / 2 + 10 )
 #	numX[2] = 
 #	numy[2] = 
 
@@ -65,18 +65,18 @@ def updateScene():
 
 	for assembly in SceneParams.assemblies:
 		if assembly.dataType == "inputs":
-			for idx, polygon in enumerate(assembly.polygons):
+			for polygon in assembly.polygons:
 				if polygon.data == 1:
 					polygon.color = [0.0, 0.8, 0.0] # Active (Green)
 				else:
-					polygon.color = [0.2, 0.2, 0.2] # Inactive (Grey)
+					polygon.color = [0.3, 0.3, 0.3] # Inactive (Grey)
 
 		elif assembly.dataType == "columns":
 			for polygon in assembly.polygons:
 				if polygon.data.isActive == True:
 					polygon.color = [0.0, 0.8, 0.0] # Active (Green)
 				else:
-					polygon.color = [0.2, 0.2, 0.2] # Inactive (Grey)
+					polygon.color = [0.3, 0.3, 0.3] # Inactive (Grey)
 
 
 #		elif assembly.dataType == "neurons":
@@ -92,15 +92,23 @@ def updateScene():
 #			for predictNeuron in predictNeurons:
 #				assembly.polygons[predictNeuron.idx].color = [0.8, 0.0, 0.8] # Predict (Violet) 
 
-			#selected_polygon = self.selected_polygon
-			#if selected_polygon:
-			#	#selected_polygon.color[0] += 0.2
-			#	#selected_polygon.color[1] += 0.2
-			#	#selected_polygon.color[2] += 0.2
-			#	idx_x = selected_polygon.idx_x
-			#	idx_y = selected_polygon.idx_y
-			#	neuron = layer.columns[idx_x].neurons[idx_y]
-			#	synapses = [basal_dendrite.synapse_addresses for basal_dendrite in neuron.basal_dendrites]
-			#	print(synapses)
-			#	self.selected_polygon = None
+	selectedPolygon = SceneParams.selectedPolygon
+	if selectedPolygon:
+		updateColors = [ 0.2, 0.2, 0.2 ]
+		selectedPolygon.color = [ sum(i) for i in zip( selectedPolygon.color, updateColors ) ]
+
+		selectedAssembly = SceneParams.selectedAssembly
+		if selectedAssembly.dataType == "columns":
+			synAddresses = selectedPolygon.data.dendrite.synAddresses
+			assembly = SceneParams.assemblies[0]
+			for synAddress in synAddresses:
+				updateColors = [ 0.2, 0.2, 0.2 ]
+				assembly.polygons[synAddress].color = [ sum(i) for i in zip( assembly.polygons[synAddress].color, updateColors ) ]
+
+#		idx_x = selected_polygon.idx_x
+#		idx_y = selected_polygon.idx_y
+#		neuron = layer.columns[idx_x].neurons[idx_y]
+#		synapses = [basal_dendrite.synapse_addresses for basal_dendrite in neuron.basal_dendrites]
+#		print(synapses)
+#		self.selected_polygon = None
  

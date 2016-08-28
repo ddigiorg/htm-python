@@ -4,6 +4,7 @@ class Square( object ):
 	def __init__( self, idxX, idxY, startX, startY, size, spacing, data ):
 		self.idxX = idxX
 		self.idxX = idxY
+		self.size = size
 
 		self.mesh = [ 0, size, 0, 0, size, 0, size, size, 0, size, size, 0 ]
 

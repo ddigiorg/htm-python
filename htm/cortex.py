@@ -83,8 +83,8 @@ class Layer3b( object ):
 			if startX < 0: startX = 0
 			if startY < 0: startY = 0
 
-			endX = originX + sizeX
-			endY = originY + sizeY
+			endX = originX + sizeX + 1
+			endY = originY + sizeY + 1
 
 			if endX > self.numInputsX: endX = self.numInputsX
 			if endY > self.numInputsY: endY = self.numInputsY
