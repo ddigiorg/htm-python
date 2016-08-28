@@ -1,8 +1,8 @@
 """
 TODO
-+ Graphics: highlight receptive fields when hovering over 2d column matrix (like in Matt's video)
++ Clean g_scene code
++ Graphics: some indicator for connected synapses
 + Fix and finish Temporal Memory
-+ Complete 2d column topology
 + Consider re-adding Synapse class to cortex.py
 + Update README.md
 + Add learning to spatial pooler
@@ -12,53 +12,53 @@ TODO
 + Clean up repository (pycache)
 """
 
-from OpenGL.GL import *   # !REMOVE STARS!
-from OpenGL.GLUT import * # !REMOVE STARS!
+from OpenGL.GL import *   # TODO: Remove stars
+from OpenGL.GLUT import * # TODO: Remove stars
 
 import graphics.g_main as g_main
 import htm.encoder as encoder
 import htm.cortex as cortex
-import htm.spatial_pooler as spatial_pooler
-import htm.temporal_memory as temporal_memory
+import htm.spatial_pooler as sp
+import htm.temporal_memory as tm
 
 import numpy as np
 import time
 
 # Cortex variables
-numInputsX = 25 #2048
-numInputsY = 25
+numInputsX = 25
+numInputsY = 25 
 numColumnsX = numInputsX
 numColumnsY = numInputsY
-numNeuronsPerColumn = 3 #32
+numNeuronsPerColumn = 32
 
 dimensions = ( numInputsX, numInputsY, numColumnsX, numColumnsY, numNeuronsPerColumn )
 
 # Class initializations
 encode = encoder.Encoder( dimensions[0], dimensions[1] )
 layer3b = cortex.Layer3b( dimensions )
-sp = spatial_pooler.SpatialPooler()
-#tm = temporal_memory.TemporalMemory()
 
 flag = 0
-
-layer = None
+inputs = None
 
 def loop():
-	global flag
+	global flag, inputs
+	pause = g_main.getPauseFlag()
 
-	sp.compute(encode.inputs, layer3b)
-#	tm.compute(layer3b)
-	time.sleep(0.05)
+	if pause == False:
+		inputs = encode.inputs[flag]
+		sp.computeSpatialPooler( inputs, layer3b )
+		tm.computeTemporalMemory( layer3b )
+	
+		if flag == 0:
+			flag = 1
+		else:
+			flag = 0
 
-	if flag == 0:
-		flag = 1
-	else:
-		flag = 0
-
-	g_main.updateGraphics()
+	#time.sleep(0.05)
+	g_main.updateGraphics( inputs, layer3b )
 
 def main():
-	g_main.initGraphics( dimensions, encode, layer3b )
+	g_main.initGraphics( encode, layer3b )
 	glutDisplayFunc( loop )
 	glutIdleFunc( loop )
 	glutMainLoop()

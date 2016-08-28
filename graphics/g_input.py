@@ -21,6 +21,14 @@ def mouseFunc( button, state, x, y ):
 					SceneParams.selectedPolygon = polygon
 					selected = True
 
+					if assembly.dataType == "columns":
+						print( "Column:", polygon.data.idxX, polygon.data.idxY )
+
+					elif assembly.dataType == "neurons":
+						print( "Neuron:", polygon.data.idx )
+						for dendrite in polygon.data.dendrites:
+							print( "Dendrite",  dendrite.idx, dendrite.synAddresses )
+
 				if not selected:
 					SceneParams.selectedAssembly = None
 					SceneParams.selectedPolygon = None
@@ -31,6 +39,6 @@ def keyboardFunc( key, x, y ):
 	if key == 'd'.encode(): ViewParams.viewX -= ViewParams.viewSpeed
 	if key == 'w'.encode(): ViewParams.viewY += ViewParams.viewSpeed
 	if key == 's'.encode(): ViewParams.viewY -= ViewParams.viewSpeed
-	if key == 'p'.encode(): print( "put continue flag here" )
+	if key == 'p'.encode(): Flags.pause = False
 
 	glutPostRedisplay()

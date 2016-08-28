@@ -1,6 +1,7 @@
 # g_global.py
 
 class Flags(object):
+	pause = False
 	cleanGraphics = False
 
 class ViewParams(object):

@@ -2,37 +2,31 @@
 
 import numpy as np
 
-class SpatialPooler(object):
+def computeSpatialPooler( axons, layer ):
+	layer.activeColumns = []
+	columns = layer.columns
+	pSynThreshold = layer.pSynThreshold
+	numActiveColumns = layer.numActiveColumns
+	overlap = []
 
-	def __init__(self):
-		self.PS_THRESHOLD = 20
-		self.ACTIVE_COLUMN_PERCENT = 0.02
+	# Overlap
+	for column in columns:
+		column.isActive = False
+		pSynAddresses =  column.dendrite.synAddresses
+		pSynPermanences = column.dendrite.synPermanences
 
-	def compute(self, axons, layer):
-		columns = layer.columns
+		if_connected = pSynPermanences > pSynThreshold
+		values = np.logical_and( axons[pSynAddresses], if_connected )
+		overlap.append( np.sum( values ) )
 
-		overlap = []
+	# Inhibition 
+	# TODO: Add random tiebreaker
+	for _ in range( numActiveColumns ):
+		idxAC = np.argmax( overlap )
+		layer.activeColumns.append( columns[idxAC] )
+		overlap[idxAC] = 0
 
-		# !MAKE THIS A LAYER() ATTRIBUTE!
-		numActiveColumns = int( layer.numColumnsX * layer.numColumnsY * self.ACTIVE_COLUMN_PERCENT )
+	# Learning
+	# TODO: Add learning
 
-		# Overlap
-		for column in columns:
-			synAddresses =  column.dendrite.synAddresses
-			synPermanences = column.dendrite.synPermanences
-
-			if_connected = synPermanences > self.PS_THRESHOLD
-			values = np.logical_and( axons[synAddresses], if_connected )
-			overlap.append( np.sum(values) )
-
-			column.isActive = False
-
-		# Inhibition !ADD RANDOM TIEBREAKER!
-		for _ in range(numActiveColumns):
-			activeColumn = np.argmax(overlap)
-			columns[activeColumn].isActive = True
-			overlap[activeColumn] = 0
-
-		# Learning
-
-#		print( [column.idx for column in columns if column.is_active == True] )
+#	print( [column.idx for column in columns if column.is_active == True] )

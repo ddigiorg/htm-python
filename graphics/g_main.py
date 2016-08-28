@@ -4,12 +4,15 @@ from graphics.g_global import Flags, ViewParams, SceneParams, OpenGLParams
 import graphics.g_scene as g_scene
 import graphics.ogl_renderer as ogl_renderer
 
-def initGraphics( dimensions, encoder, layer ):
+def getPauseFlag():
+	return Flags.pause
+
+def initGraphics( encoder, layer ):
 	assemblies = SceneParams.assemblies
 
 	ogl_renderer.init()
 	initOrthogonalProjection()
-	g_scene.initScene( dimensions, encoder, layer )
+	g_scene.initScene( encoder, layer )
 
 	meshList = assemblies[0].polygons[0].mesh
 
@@ -31,11 +34,11 @@ def initGraphics( dimensions, encoder, layer ):
                             positionList,
                             2, )
 
-def updateGraphics():
+def updateGraphics( inputs, layer ):
 	assemblies = SceneParams.assemblies
 
 	updateView()
-	g_scene.updateScene()
+	g_scene.updateScene( inputs, layer )
 
 	colorList = []
 	for assembly in assemblies:
@@ -53,6 +56,8 @@ def updateGraphics():
 	numPolygons = int( len( colorList ) / 3 )
 	ogl_renderer.draw( "triangles", numPolygons )
 #	ogl_renderer.draw( "line_strip", numPolygons )
+
+	Flags.pause = True
 
 	if Flags.cleanGraphics == True: cleanGraphics()
 

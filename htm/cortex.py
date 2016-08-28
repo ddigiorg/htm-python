@@ -25,7 +25,7 @@ class Column( object ):
 		self.idxX = idxX
 		self.idxY = idxY
 		
-		self.neurons = [ Neuron( idxX + numColumnsX * ( idxY + numColumnsY * idxN ),
+		self.neurons = [ Neuron( idxN + numColumnsX * ( idxX + numColumnsY * idxY ),
                                  self )
                          for idxN in range( numNeuronsPerColumn ) ]
 
@@ -44,14 +44,26 @@ class Layer3b( object ):
 		self.numColumnsX = dimensions[2]
 		self.numColumnsY = dimensions[3]
 		self.numNeuronsPerColumn = dimensions[4]
+		self.percentActiveColumns = 0.02
+		self.numActiveColumns = int( self.numColumnsX *
+                                     self.numColumnsY *
+                                     self.percentActiveColumns )
+
+		if self.numActiveColumns <= 0:
+			self.numActiveColumns = 1
+
+		self.pSynThreshold = 20
+		self.bSynThreshold = 20
 
 		self.columns = [ Column( idxX,
                                  idxY, 
                                  self.numColumnsX,
                                  self.numColumnsY,
                                  self.numNeuronsPerColumn )
-                         for idxX in range( self.numColumnsX )
-                         for idxY in range( self.numColumnsY ) ]
+                         for idxY in range( self.numColumnsY )
+                         for idxX in range( self.numColumnsX ) ]
+
+		self.activeColumns = []
 
 		self.activeNeurons  = []
 		self.winnerNeurons  = []
@@ -60,18 +72,10 @@ class Layer3b( object ):
 		self.activeDendrites   = []
 		self.matchingDendrites = []
 
-#		self.initRandomReceptiveFields( numInputs )
-		self.initTopologicalReceptiveFields( 5, 5 )
+		receptFieldX = int( self.numInputsX / 5 )
+		receptFieldY = int( self.numInputsY / 5 )
+		self.initTopologicalReceptiveFields( receptFieldX, receptFieldY )
 
-	def initRandomReceptiveFields( self, numInputs ):
-		for column in self.columns:
-			numProxSynapses = int( numInputs * 0.5 )
-
-			synAddresses = np.random.choice( numInputs, numProxSynapses, replace=False )
-			synPermanences = np.random.random_integers( 20, 21, numProxSynapses )
-			column.createDendrite( numInputs, synAddresses, synPermanences )
-
-	# Make more efficient
 	def initTopologicalReceptiveFields(self, sizeX, sizeY):
 		for column in self.columns:
 			originX = column.idxX
@@ -89,9 +93,9 @@ class Layer3b( object ):
 			if endX > self.numInputsX: endX = self.numInputsX
 			if endY > self.numInputsY: endY = self.numInputsY
 
-			synAddresses = [ x + self.numColumnsX * y
-                             for x in range( startX, endX )
-                             for y in range( startY, endY ) ]
+			synAddresses = [ idxX + self.numColumnsX * idxY
+                             for idxY in range( startY, endY )
+                             for idxX in range( startX, endX ) ]
 
 			synPermanences = np.random.random_integers( 20, 21, len( synAddresses ) )
 			column.createDendrite( synAddresses, synPermanences )
@@ -100,26 +104,29 @@ class Layer3b( object ):
 	# Figure out how this is implemented by Numenta
 	# Move this over to temporal memory?
 	# Make more efficient
-	def computeBasalDendriteActivity(self, active_neurons):
-		self.active_dendrites = []
+	def computeBasalDendriteActivity( self ):
+		self.activeDendrites = []
 
-		inputs = np.zeros(self.num_neurons, dtype=np.int8)
-		active_neuron_indices = [ neuron.idx for neuron in active_neurons]
-		inputs[active_neuron_indices] = 1
+		inputs = np.zeros( self.numColumnsX * 
+                           self.numColumnsY *
+                           self.numNeuronsPerColumn,
+                           dtype=np.int8)
+
+		activeNeuronIndices = [ neuron.idx for neuron in self.activeNeurons ]
+		inputs[activeNeuronIndices] = 1
 
 		for column in self.columns:
-			column.has_active_basalDendrites = False
+			column.hasActiveBasalDendrites = False
 			for neuron in column.neurons:
-				for basal_dendrite in neuron.basalDendrites:
-					bs_addresses = basal_dendrite.synAddresses
-					bs_permanences = basal_dendrite.synPermanences
+				for dendrite in neuron.dendrites:
+					bSynAddresses = dendrite.synAddresses
+					bSynPermanences = dendrite.synPermanences
 
-					if_connected = bs_permanences > 20 # BS_THRESHOLD.  Find a home for it
-					values = np.logical_and(inputs[bs_addresses], if_connected)
-					overlap = np.sum(values)
+					if_connected = bSynPermanences > self.bSynThreshold
+					values = np.logical_and( inputs[bSynAddresses], if_connected )
+					overlap = np.sum( values )
 
-					if overlap > 39: # Segment activation threshold.  Find a home for it
-#					if overlap > 0:
-						self.active_dendrites.append(basal_dendrite)
-						self.predict_neurons.append(neuron)
-						column.has_active_basalDendrites = True
+					if overlap > 10: # Segment activation threshold.  Find a home for it
+						self.activeDendrites.append( dendrite )
+						self.predictNeurons.append( neuron )
+						column.hasActiveBasalDendrites = True
