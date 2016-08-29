@@ -13,19 +13,23 @@ def computeTemporalMemory( layer ):
 	for column in columns:
 		if column in layer.activeColumns:
 			if column.hasActiveBasalDendrites:
-				activatePredictedColumn( layer )
+				activatePredictedColumn( layer, column )
 			else:
 				burstColumn( layer, column, prevWinnerNeurons )
 
 	layer.computeBasalDendriteActivity()
 
+#	print( [dendrite.parent.idx for dendrite in layer.activeDendrites] )
+	print( [neuron.idx for neuron in layer.winnerNeurons] )
+
 # Finish coding
 # Add learning
-def activatePredictedColumn( layer ):
+def activatePredictedColumn( layer, column ):
 	addNeurons = []
 
 	for activeDendrite in layer.activeDendrites:
-		addNeurons.append( activeDendrite.parent )
+		if activeDendrite.parent.column == column:
+			addNeurons.append( activeDendrite.parent )
 
 	layer.activeNeurons += addNeurons
 	layer.winnerNeurons += addNeurons

@@ -17,8 +17,8 @@ class Neuron( object ):
 		self.dendrites = []
 
 	def createDendrite( self, addresses, permanences ):
-		idx = len( self.dendrites )
-		self.dendrites.append( Dendrite( idx, self, addresses, permanences ) )
+		idxD = len( self.dendrites )
+		self.dendrites.append( Dendrite( idxD, self, addresses, permanences ) )
 
 class Column( object ):
 	def __init__( self, idxX, idxY, numColumnsX, numColumnsY, numNeuronsPerColumn ):
