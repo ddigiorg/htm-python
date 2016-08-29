@@ -1,12 +1,11 @@
 """
 TODO
-+ Clean g_scene code
-+ Graphics: some indicator for connected synapses
 + Fix and finish Temporal Memory
 + Consider re-adding Synapse class to cortex.py
 + Update README.md
 + Add learning to spatial pooler
 + Add better timing maybe in graphics?
++ Clean g_scene code
 + Clean entire code!  Make standardize class, function, and variable names to a convention
 + For all files change tabs to spaces
 + Clean up repository (pycache)

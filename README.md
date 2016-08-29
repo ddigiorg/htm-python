@@ -1,12 +1,18 @@
 #Hierarchical Temporal Memory (HTM)
 
-A simple python implementation of Numenta's HTM algorithm.  The purpose of this project is to develop a foundational understanding of the basic neuroscience principles of the cortex and apply algorithms using that knowlege.
+This project is a simple Python implementation of Numenta's HTM algorithm along with visualization software using OpenGL.  The purpose of this project is to achieve a foundational understanding of cortical neuroscience principles and demonstrate these intelligence principles by implementing HTM algorithms.
+
+So far the code models layer 3b of the cortex, which provides sequence memory inference.
 
 ##Structure of the Cortex
 
 ####Cortex
 
-The human cortex is about 2-3mm thick with many regions arranged in a hierarchy.  Some well-known regions include the frontal lobe, parietal lobe, occipical lobe, and temporal lobe.
+The human cortex is about 2-3mm thick with many regions arranged in a hierarchy.  Some basic regions include:
++ Frontal Lobe: 
++ Parietal Lobe:
++ Occipical Lobe: vision
++ Temporal Lobe:
 
 ####Region
 
@@ -27,22 +33,11 @@ Each layer contains ocolumns of neurons that all respond to a particular stimulu
 
 ####Columns
 
-Macrocolumns are  vertical structures of neurons and can be broken down into a more basic structure, the minicolumn.  Due to a class of inhibitory neurons, all neurons in the column respond to the same feed forward inputs of the proximal dendrites.  Therefore in the HTM algorithm for organizational purposes, each column stores proximal dendrites rather than each neuron in a column.
+Mini-columns are  vertical structures through the 6 layers of cortex comprising of about 80-120 neurons.  A neuron's feed forward input, the proximal dendrite, attaches to a receptive field, or particular area of sensory space in which stimulus will trigger the firing of the neuron.  Neurons in a minicolumn have the same receptive field.  Therefore in the HTM algorithm for organizational purposes, each column stores proximal dendrites rather than each neuron in a column.
 
-####Neurons
+####Neurons (Cell in HTM)
 
-The structure of an HTM cell, or neuron, is modeled after pyramidal neurons in the neocortex.  In a real neuron when it is in an active state the axon outputs a short burst of action potentials.  When it is in a predictive state the axon outputs a slower, steady rate of action potentials.  These action potentials are not modeled in the HTM.
-
-#####Neuron Inputs
-+ Proximal Dendrites
-+ Apical Dendrites
-+ Basal Dendrites
-
-#####Neuron Outputs
-Axon: has 3 output states:
-+ Inactive
-+ Active
-+ Prediction
+The structure of an HTM cell, or neuron, is modeled after pyramidal neurons in the neocortex.  In a real neuron when it is in an active state the axon outputs a short burst of action potentials.  When it is in a predictive state the axon outputs a slower, steady rate of action potentials.  These action potentials are only modeled with a binary "on" or "off" for a cell's state.
 
 ####Dendrite Segments
 
@@ -54,7 +49,6 @@ Axon: has 3 output states:
 
 + Potential Synapses: Represents all the axons that pass close enough to a dendrite segment that they could potentially form a synapse.
 + Permanance: A scalar value representing the range of connectedness between an axon and a dendrite.  If the permanance is above a certain threshold, the synapse is connected.
-+ Index: Denotes what input or axon the synapse is paired with.
 
 ##Spatial Pooling Function
 
