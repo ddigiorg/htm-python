@@ -1,54 +1,50 @@
+# temporal_memory.py
+
 import numpy as np
+import htm.cortex as cortex
 
 def computeTemporalMemory( layer ):
-	columns = layer.columns
+	prevWinnerNeurons = cortex.resetNeuronStates( layer )
 
-	prevActiveNeurons = layer.activeNeurons
-	prevWinnerNeurons = layer.winnerNeurons
-
-	layer.activeNeurons = []
-	layer.winnerNeurons = []
-	layer.predictNeurons = []
-
-	for column in columns:
-		if column in layer.activeColumns:
+	for column in layer.columns:
+		if column.isActive:
 			if column.hasActiveBasalDendrites:
 				activatePredictedColumn( layer, column )
 			else:
 				burstColumn( layer, column, prevWinnerNeurons )
 
-	layer.computeBasalDendriteActivity()
+	layer.activeSegments = []
+	cortex.computeDendriteActivity( layer )
 
 #	print( [dendrite.parent.idx for dendrite in layer.activeDendrites] )
-	print( [neuron.idx for neuron in layer.winnerNeurons] )
+#	print( [neuron.idx for neuron in layer.winnerNeurons] )
 
 # Finish coding
 # Add learning
 def activatePredictedColumn( layer, column ):
-	addNeurons = []
-
 	for activeDendrite in layer.activeDendrites:
 		if activeDendrite.parent.column == column:
-			addNeurons.append( activeDendrite.parent )
-
-	layer.activeNeurons += addNeurons
-	layer.winnerNeurons += addNeurons
+			neuron = activeDendrite.parent
+			neuron.isActive = True
+			neuron.isWinner = True
 
 # Finish coding
 # Add learning
 def burstColumn( layer, column, prevWinnerNeurons ):
-	neurons = column.neurons
-	addNeurons = neurons
-	bestNeuron = np.random.choice( neurons )
+	activeNeurons = column.neurons
+	bestNeuron = np.random.choice( activeNeurons )
 
-	numAxons = len( prevWinnerNeurons )
+	numSynapses = len( prevWinnerNeurons )
 
-	numAddedSynapses = min( 40, numAxons ) # 40 is max new synapse count.  Find a home for it
+	numAddedSynapses = min( 40, numSynapses ) # 40 is max new synapse count.  Find a home for it
 
 	if numAddedSynapses > 0:
-		synAddresses = np.array( [neuron.idx for neuron in prevWinnerNeurons], dtype=np.int32 )
-		synPermanences = np.full( numAxons, 21, dtype=np.int8 )
-		bestNeuron.createDendrite( synAddresses, synPermanences )
+		synConnections = prevWinnerNeurons
+		synPermanences = np.full( numSynapses, 21, dtype=np.int8 )
+		cortex.createDendrite( bestNeuron )
+		dendrite = bestNeuron.dendrites[-1]
+		cortex.createSynapses( numSynapses, dendrite, synConnections, synPermanences )
 
-	layer.activeNeurons += addNeurons
-	layer.winnerNeurons.append( bestNeuron )
+	for neuron in activeNeurons:
+		neuron.isActive = True
+	bestNeuron.isWinner = True

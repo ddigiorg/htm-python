@@ -7,12 +7,12 @@ import graphics.ogl_renderer as ogl_renderer
 def getPauseFlag():
 	return Flags.pause
 
-def initGraphics( encoder, layer ):
+def initGraphics( layerIn, layer ):
 	assemblies = SceneParams.assemblies
 
 	ogl_renderer.init()
 	initOrthogonalProjection()
-	g_scene.initScene( encoder, layer )
+	g_scene.initScene( layerIn, layer )
 
 	meshList = assemblies[0].polygons[0].mesh
 
@@ -34,11 +34,11 @@ def initGraphics( encoder, layer ):
                             positionList,
                             2, )
 
-def updateGraphics( inputs, layer ):
+def updateGraphics( layerIn, layer ):
 	assemblies = SceneParams.assemblies
 
 	updateView()
-	g_scene.updateScene( inputs, layer )
+	g_scene.updateScene( layerIn, layer )
 
 	colorList = []
 	for assembly in assemblies:

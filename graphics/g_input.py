@@ -22,12 +22,13 @@ def mouseFunc( button, state, x, y ):
 					selected = True
 
 					if assembly.dataType == "columns":
-						print( "Column:", polygon.data.idxX, polygon.data.idxY )
+						print( "Column:", polygon.data.idx )
 
 					elif assembly.dataType == "neurons":
 						print( "Neuron:", polygon.data.idx )
 						for dendrite in polygon.data.dendrites:
-							print( "Dendrite",  dendrite.idx, dendrite.synAddresses )
+							synapses = [ synapse.connection.idx for synapse in dendrite.synapses ]
+							print( "Dendrite",  dendrite.idx, synapses )
 
 				if not selected:
 					SceneParams.selectedAssembly = None

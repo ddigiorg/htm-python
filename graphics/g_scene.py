@@ -6,7 +6,7 @@ import graphics.g_model as g_model
 MAX_NUM_X = 25
 MAX_NUM_Y = 25
 
-def initScene( encoder, layer ):
+def initScene( layerIn, layer ):
 	numAssemblies = 3
 
 	dataType = [""] * numAssemblies
@@ -23,11 +23,11 @@ def initScene( encoder, layer ):
 	dataType[0] = "inputs"
 	x[0] = 10
 	y[0] = 10
-	numX[0] = encoder.numInputsX
-	numY[0] = encoder.numInputsY
+	numX[0] = layerIn.numInputsX
+	numY[0] = layerIn.numInputsY
 	spacingX[0] = 1
 	spacingY[0] = 1
-	data[0] = encoder.inputs[0] #TODO: Consider removing
+	data[0] = layerIn.neurons
 
 	dataType[1] = "columns"
 	x[1] = int( ViewParams.viewportWidth / 2 + 10 )
@@ -69,7 +69,7 @@ def initScene( encoder, layer ):
 
 		SceneParams.assemblies.append( g_model.Assembly( polygons, dataType[i] ) )
 
-def updateScene( inputs, layer ):
+def updateScene( layerIn, layer ):
 #	activeNeurons  = [ activeNeuron  for activeNeuron  in layer.activeNeurons  if activeNeuron.idx  < MAX_NUM_X ]
 #	winnerNeurons  = [ winnerNeuron  for winnerNeuron  in layer.winnerNeurons  if winnerNeuron.idx  < MAX_NUM_X ]
 #	predictNeurons = [ predictNeuron for predictNeuron in layer.predictNeurons if predictNeuron.idx < MAX_NUM_X ]
@@ -77,27 +77,25 @@ def updateScene( inputs, layer ):
 	for assembly in SceneParams.assemblies:
 		if assembly.dataType == "inputs":
 			for polygon in assembly.polygons:
-				idx = polygon.idxX + layer.numInputsX * polygon.idxY # TODO: Clean this up
-				if inputs[idx] == 1:
+				if polygon.data.isActive:
 					polygon.color = [0.0, 0.6, 0.0] # Active (Green)
 				else:
 					polygon.color = [0.3, 0.3, 0.3] # Inactive (Grey)
 
 		elif assembly.dataType == "columns":
 			for polygon in assembly.polygons:
-				if polygon.data in layer.activeColumns:
+				if polygon.data.isActive:
 					polygon.color = [0.0, 0.6, 0.0] # Active (Green)
 				else:
 					polygon.color = [0.3, 0.3, 0.3] # Inactive (Grey)
 
-		# TODO: Make more efficient
 		elif assembly.dataType == "neurons":
 			for polygon in assembly.polygons:
-				if polygon.data in layer.predictNeurons:
+				if polygon.data.isPredict:
 					polygon.color = [0.6, 0.0, 0.6] # Predict (Violet)
-				elif polygon.data in layer.winnerNeurons:
+				elif polygon.data.isWinner:
 					polygon.color = [0.0, 0.0, 0.6] # Winner (Blue)
-				elif polygon.data in layer.activeNeurons:
+				elif polygon.data.isActive:
 					polygon.color = [0.0, 0.6, 0.0] # Active (Green)
 				else:
 					polygon.color = [0.3, 0.3, 0.3] # Inactive (Grey)
@@ -109,10 +107,11 @@ def updateScene( inputs, layer ):
 
 		selectedAssembly = SceneParams.selectedAssembly
 		if selectedAssembly.dataType == "columns":
-			synAddresses = selectedPolygon.data.dendrite.synAddresses
+			synapses = selectedPolygon.data.dendrites[-1].synapses
 			assembly = SceneParams.assemblies[0]
-			for synAddress in synAddresses:
-				assembly.polygons[synAddress].color = [ sum(i) for i in zip( assembly.polygons[synAddress].color, updateColors ) ]
+			for synapse in synapses:
+				idxN = synapse.connection.idx
+				assembly.polygons[idxN].color = [ sum(i) for i in zip( assembly.polygons[idxN].color, updateColors ) ]
 
 #		if selectedAssembly.dataType == "neurons":
 #			dendrites = [dendrite.synAddresses for dendrite in selectedPolygon.data.dendrites]

@@ -2,11 +2,24 @@
 
 import numpy as np
 
-class Encoder( object ):
-	def __init__( self, numInputsX, numInputsY ):
-		self.numInputsX = numInputsX
-		self.numInputsY = numInputsY
+class InputNeuron( object ):
+	def __init__( self, idx ):
+		self.idx = idx
 
-		self.inputs = np.zeros( (2, numInputsY * numInputsX ), dtype=np.int8 )
-		self.inputs[0, 0:  5] = 1 
-		self.inputs[1, 5: 10] = 1 
+		self.isActive = False
+
+class InputLayer( object ):
+	def __init__( self, dimensions ):
+		self.numInputsX = dimensions[0]
+		self.numInputsY = dimensions[1]
+
+		self.neurons = [ InputNeuron(idxX + self.numInputsY * idxY)
+                         for idxY in range( self.numInputsY ) 
+                         for idxX in range( self.numInputsX ) ]
+
+	def activeateInputs(self, lower, upper ):
+		for neuron in self.neurons:
+			if lower <= neuron.idx <= upper:
+				neuron.isActive = True
+			else:
+				neuron.isActive = False

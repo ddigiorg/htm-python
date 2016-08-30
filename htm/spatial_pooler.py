@@ -1,29 +1,26 @@
-#spatial_pooler.py
+# spatial_pooler.py
 
 import numpy as np
+import htm.cortex as cortex
 
-def computeSpatialPooler( axons, layer ):
-	layer.activeColumns = []
+def computeSpatialPooler( layerIn, layer ):
 	columns = layer.columns
-	pSynThreshold = layer.pSynThreshold
 	numActiveColumns = layer.numActiveColumns
+	pSynThreshold = layer.pSynThreshold
+
 	overlap = []
 
 	# Overlap
 	for column in columns:
 		column.isActive = False
-		pSynAddresses =  column.dendrite.synAddresses
-		pSynPermanences = column.dendrite.synPermanences
-
-		if_connected = pSynPermanences > pSynThreshold
-		values = np.logical_and( axons[pSynAddresses], if_connected )
-		overlap.append( np.sum( values ) )
+		dendrite = column.dendrites[-1]
+		overlap.append( cortex.computeOverlap( dendrite, pSynThreshold ) )
 
 	# Inhibition 
 	# TODO: Add random tiebreaker
 	for _ in range( numActiveColumns ):
 		idxAC = np.argmax( overlap )
-		layer.activeColumns.append( columns[idxAC] )
+		layer.columns[idxAC].isActive = True
 		overlap[idxAC] = 0
 
 	# Learning

@@ -33,31 +33,32 @@ numNeuronsPerColumn = 32
 dimensions = ( numInputsX, numInputsY, numColumnsX, numColumnsY, numNeuronsPerColumn )
 
 # Class initializations
-encode = encoder.Encoder( dimensions[0], dimensions[1] )
+layerIn = encoder.InputLayer( dimensions )
 layer3b = cortex.Layer3b( dimensions )
+cortex.initReceptiveFields( layerIn, layer3b )
 
 flag = 0
-inputs = None
 
 def loop():
-	global flag, inputs
+	global flag
 	pause = g_main.getPauseFlag()
 
 	if pause == False:
-		inputs = encode.inputs[flag]
-		sp.computeSpatialPooler( inputs, layer3b )
-		tm.computeTemporalMemory( layer3b )
-	
 		if flag == 0:
+			layerIn.activeateInputs( 0, 4 )
 			flag = 1
 		else:
+			layerIn.activeateInputs( 5, 9 )
 			flag = 0
 
+		sp.computeSpatialPooler( layerIn, layer3b )
+		tm.computeTemporalMemory( layer3b )
+
 	#time.sleep(0.05)
-	g_main.updateGraphics( inputs, layer3b )
+	g_main.updateGraphics( layerIn, layer3b )
 
 def main():
-	g_main.initGraphics( encode, layer3b )
+	g_main.initGraphics( layerIn, layer3b )
 	glutDisplayFunc( loop )
 	glutIdleFunc( loop )
 	glutMainLoop()
