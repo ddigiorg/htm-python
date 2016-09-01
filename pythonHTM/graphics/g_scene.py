@@ -70,10 +70,6 @@ def initScene( layerIn, layer ):
 		SceneParams.assemblies.append( g_model.Assembly( polygons, dataType[i] ) )
 
 def updateScene( layerIn, layer ):
-#	activeNeurons  = [ activeNeuron  for activeNeuron  in layer.activeNeurons  if activeNeuron.idx  < MAX_NUM_X ]
-#	winnerNeurons  = [ winnerNeuron  for winnerNeuron  in layer.winnerNeurons  if winnerNeuron.idx  < MAX_NUM_X ]
-#	predictNeurons = [ predictNeuron for predictNeuron in layer.predictNeurons if predictNeuron.idx < MAX_NUM_X ]
-
 	for assembly in SceneParams.assemblies:
 		if assembly.dataType == "inputs":
 			for polygon in assembly.polygons:
@@ -112,11 +108,3 @@ def updateScene( layerIn, layer ):
 			for synapse in synapses:
 				idxN = synapse.connection.idx
 				assembly.polygons[idxN].color = [ sum(i) for i in zip( assembly.polygons[idxN].color, updateColors ) ]
-
-#		if selectedAssembly.dataType == "neurons":
-#			dendrites = [dendrite.synAddresses for dendrite in selectedPolygon.data.dendrites]
-#			for dendrite in dendrites:
-#				for synapse in dendrite:
-#					selectedAssembly.polygons[synapse].color = [ sum(i)
-#                                                                 for i in zip( selectedAssembly.polygons[synapse].color,
-#                                                                               updateColors ) ]	
