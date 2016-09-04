@@ -1,2 +1,2 @@
-test.exe: main.c cortex.c
-	gcc -o test.exe main.c cortex.c
+all: main.cpp
+	g++ -lOpenCL -I. -o test.exe main.cpp ./compute/Constructs.hpp ./compute/Constructs.cpp ./htm/HTM.hpp ./htm/HTM.cpp

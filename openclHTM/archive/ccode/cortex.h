@@ -5,10 +5,10 @@
 
 #include <stdio.h>
 
-#define MAX_NUM_SYNAPSES 1
-#define MAX_NUM_DENDRITES 1
-#define MAX_NUM_NEURONS 1
-#define MAX_NUM_COLUMNS 1
+#define MAX_NUM_SYNAPSES (1)
+#define MAX_NUM_DENDRITES (1)
+#define MAX_NUM_NEURONS (1)
+#define MAX_NUM_COLUMNS (1)
 
 typedef struct synapse_s {
 	int connection;
@@ -20,12 +20,12 @@ typedef struct dendrite_s {
 } dendrite_t;
 
 typedef struct neuron_s {
-	dendrite_t dendrites[MAX_NUM_DENDRITES];
+	dendrite_t bDendrites[MAX_NUM_DENDRITES];
 } neuron_t;
 
 typedef struct column_s {
 	neuron_t neurons[MAX_NUM_NEURONS];
-	dendrite_t dendrite;
+	dendrite_t pDendrite;
 } column_t;
 
 typedef struct layer3b_s {
