@@ -14,6 +14,7 @@ int main() {
 	htm::HTM h;
 
 	h.initLayer3b( c );
+	h.initColReceptField( c );
 
 	return 0;
 }

@@ -6,47 +6,62 @@
 using namespace htm;
 
 HTM::HTM() {
+	_numInputsX = 5;
+	_numInputsY = 5;
+	_apothemReceptFieldX = 2;
+	_apothemReceptFieldY = 2;
 	_numColumnsX = 5;
-	_numColumnsY = 5;
-	_numReceptFieldX = 2;
-	_numReceptFieldY = 2;
+	_numColumnsY = 5;	
+
+	_numColumns = _numColumnsX * _numColumnsY;
+ 	_numPSynapsesPerColumn = ( _apothemReceptFieldX + 1 ) * ( _apothemReceptFieldY + 1 );
+	_numPSynapses = _numColumns * _numPSynapsesPerColumn;
+
+	_intSize = sizeof(int);
+
+	_globalNDRange = cl::NDRange( _numColumns );
 }
 
 void HTM::initLayer3b( compute::Constructs &c ) {
-
-	int intSize = sizeof(int);
-
-	int numColumns;
-	int numPSynapsesPerColumn;
-	int numPSynapses;
-
-	numColumns = _numColumnsX * _numColumnsY;
- 	numPSynapsesPerColumn = _numReceptFieldX * _numReceptFieldY;
-	numPSynapses = numColumns * numPSynapsesPerColumn;
-
-//	std::cout << "numColumns: " << numColumns << std::endl;
-//	std::cout << "numSynapsesPerColumn: " << numPSynapsesPerColumn << std::endl;
-//	std::cout << "numPSynapsesColumns: " << numPSynapses << std::endl;
-
 	try {	
-		_pSynapseConnections = cl::Buffer( c.getContext(), CL_MEM_READ_WRITE, numPSynapses * intSize );
-		_pSynapsePermanences = cl::Buffer( c.getContext(), CL_MEM_READ_WRITE, numPSynapses * intSize );
-		_columnStates = cl::Buffer( c.getContext(), CL_MEM_READ_WRITE, numColumns * intSize );
-
-//		c.getQueue().enqueueFillBuffer( pSynapseConnections,  );
+		_pSynapseConnections = cl::Buffer( c.getContext(), CL_MEM_READ_WRITE, _numPSynapses * _intSize );
+		_pSynapsePermanences = cl::Buffer( c.getContext(), CL_MEM_READ_WRITE, _numPSynapses * _intSize );
+		_columnStates = cl::Buffer( c.getContext(), CL_MEM_READ_WRITE, _numColumns * _intSize );
 	}
+
 	catch( cl::Error error) {
 		std::cout << error.what() << " : " << error.err() << std::endl;
 	}
 }
 
-void HTM::initReceptiveFields( compute::Constructs &c ) {
-		_initLayer3bKernel = cl::Kernel( c.getProgram(), "initLayer3b" );
+void HTM::initColReceptField( compute::Constructs &c ) {
 
-		_initLayer3bKernel.setArg( 0, _numColumnsX );
-		_initLayer3bKernel.setArg( 1, _numColumnsY );
+	try {
+		_initColReceptFieldKernel = cl::Kernel( c.getProgram(), "initColReceptField" );
 
-		c.getQueue().enqueueTask( _initLayer3bKernel );
+		_initColReceptFieldKernel.setArg( 0, _numInputsX );
+		_initColReceptFieldKernel.setArg( 1, _numInputsY );
+		_initColReceptFieldKernel.setArg( 2, _apothemReceptFieldX );
+		_initColReceptFieldKernel.setArg( 3, _apothemReceptFieldY );
+		_initColReceptFieldKernel.setArg( 4, _numColumnsX );
+		_initColReceptFieldKernel.setArg( 5, _numColumnsY );
+		_initColReceptFieldKernel.setArg( 6, _numPSynapsesPerColumn );
+		_initColReceptFieldKernel.setArg( 7, _pSynapseConnections );
+
+		int test[225];
+
+		c.getQueue().enqueueNDRangeKernel( _initColReceptFieldKernel, cl::NullRange, _globalNDRange );
+	    c.getQueue().enqueueReadBuffer( _pSynapseConnections,CL_TRUE, 0, 225 * _intSize, test );
 		c.getQueue().finish();
+
+		for(int i = 0; i < 225; i++) {
+			std::cout << test[i] << " ";
+		}
+		std::cout << std::endl;
+
+	}
+	catch( cl::Error error) {
+		std::cout << error.what() << " : " << error.err() << std::endl;
+	}
 
 }
