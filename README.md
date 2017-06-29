@@ -62,5 +62,5 @@ The spatial pooling function operates on a layer of a cortical region.  It uses 
 
 ## Temporal Memory Function
 
-The temporal pooler function operates at the neuronal level by by using each neuron's basal dendrite input.  Apical dendrites have not been implemented in this version of the algorithm.
+The temporal memory function operates at the neuronal level by by using each neuron's basal dendrite input.  Apical dendrites have not been implemented in this version of the algorithm.
 
